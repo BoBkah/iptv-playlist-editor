@@ -1,0 +1,38 @@
+{
+  "development": {
+    "dialect": "sqlite",
+    "storage": "database/live.sqlite",
+    "loggin": true,
+    "email": {
+      "host": "localhost",
+      "port": 25,
+      "username": "",
+      "password": "",
+      "mailAddress": "your-email-to-receive-changes@domain.com"
+    }
+  },
+  "test": {
+    "dialect": "sqlite",
+    "storage": "memory",
+    "loggin": true,
+    "email": {
+      "host": "localhost",
+      "port": 25,
+      "username": "",
+      "password": "",
+      "mailAddress": "your-email-to-receive-changes@domain.com"
+    }
+  },
+  "production": {
+    "dialect": "sqlite",
+    "storage": "database/live.sqlite",
+    "loggin": false,
+    "email": {
+      "host": "localhost",
+      "port": 25,
+      "username": "",
+      "password": "",
+      "mailAddress": "your-email-to-receive-changes@domain.com"
+    }
+  }
+}

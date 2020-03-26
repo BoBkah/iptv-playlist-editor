@@ -1,0 +1,953 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>IPTV playlist editor</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
+        <style>
+            #overlay {
+                display: none;
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(60, 138, 255, 0.2);
+                z-index: 2;
+                cursor: progress;
+            }
+            #overlay div {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+            }
+            i {
+                cursor: pointer;
+            }
+            i.fa-arrows-alt {
+                cursor: move;
+            }
+            .card {
+                margin-bottom: 20px;
+            }
+            .card-body {
+                padding: 0;
+                padding-bottom: 0;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-size: contain;
+                max-height: 4rem;
+            }
+            .card-title {
+                display: table-cell;
+                height: 4rem;
+                width: 300px;
+                background: rgba(255, 255, 255, 0.9);
+            }
+            .card-title span {
+                line-height: 4rem;
+            }
+            .card-footer i {
+                margin-right: 0.25rem;
+            }
+            .list-group-item {
+                padding-left: 0.5em;
+            }
+            .list-group-item.active {
+                background-color: #17a2b8;
+                border-color: #17a2b8;
+            }
+            .tooltip.show p {
+                text-align:left;
+            }
+            .tooltip-inner {
+                max-width: 350px;
+            }
+            h5>small>i:first-child {
+                margin-left: 1rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <h1>IPTV playlist editor</h1>
+            <div class="row">
+                <div class="col-xl-3 col-4">
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group" id="providerPanel"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group" id="providerCategoryPanel"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="panel" id="providerStreamPanel"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-9 col-8">
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group" id="playlistPanel"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="panel" id="playlistCategoryPanel"></div>
+                        </div>
+                        <div class="col-8">
+                            <div class="panel" id="playlistStreamPanel"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Overlay spinner -->
+        <div id="overlay">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+        <!-- Modal -->
+        <div class="modal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content"></div>
+            </div>
+          </div>
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.3/handlebars.min.js" integrity="sha256-/PJBs6QWvXijOFIX04kZpLb6ZtSQckdOIavLWKKOgXU=" crossorigin="anonymous"></script>
+        <script src="https://SortableJS.github.io/Sortable/Sortable.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
+        <script>
+            Handlebars.registerHelper('isSelected', function (optionValue, selectedValue) {
+                console.log(optionValue, selectedValue)
+                return optionValue == selectedValue ? 'selected' : ''
+            })
+            var getUrl = window.location;
+            var baseUrl = getUrl .protocol + "//" + getUrl.host;
+            $(document).keypress(function (e) {
+                if (e.which === 13) {
+                    e.preventDefault()
+                    return
+                }
+            })
+            $(document).ready(function () {
+                var providerList = []
+                // Get provider list
+                const providerUpdate = function () {
+                    $('#providerPanel').hide()
+                    axios.get('/manager/api/provider', {
+                        responseType: 'json'
+                    }).then(function (providers) {
+                        providerList = providers.data
+                        let template = Handlebars.compile($('#providerList-template').html())
+                        let html = template({
+                            provider: providers.data
+                        })
+                        $('#providerPanel').html(html)
+                        $('#providerPanel').show()
+                        $('#providerAdd').on('click', function () {
+                            let template = Handlebars.compile($('#providerModalAdd-template').html())
+                            let html = template()
+                            $('div.modal div.modal-content').html(html)
+                            $('div.modal').modal()
+                            $('#providerAddButton').on('click', function () {
+                                providerAdd()
+                            })
+                        })
+                        $('#providerEdit').on('click', function () {
+                            let template = Handlebars.compile($('#providerModalEdit-template').html())
+                            // Get provider infos
+                            axios.get('/manager/api/provider/' + $('#providerList option:selected').val(), {
+                                responseType: 'json'
+                            }).then(function (providerInfos) {
+                                let html = template({
+                                    provider: providerInfos.data
+                                })
+                                $('div.modal div.modal-content').html(html)
+                                $('div.modal').modal()
+                                $('#providerSaveButton').on('click', function () {
+                                    providerSave()
+                                })
+                            })
+                        })
+                        if (providers.data.length > 0) {
+                            // Get category list
+                            $('#providerList').on('change', function() {
+                                providerCategoryUpdate()
+                            })
+                            $('#providerSync').on('click', function() {
+                                providerSynchronize()
+                            })
+                            providerCategoryUpdate()
+                        }
+                        $('#providerDelete').on('click', function () {
+                            let ack = confirm('Please confirm deletion of ' + $('#providerList option:selected').text() + ' provider')
+                            if (ack === true) {
+                                axios.delete('/manager/api/provider/' + $('#providerList option:selected').val()).then(function () {
+                                    providerUpdate()
+                                })
+                            }
+                        })
+                    })
+                }
+                providerUpdate()
+                const providerCategoryUpdate = function() {
+                    $('#providerCategoryPanel').hide()
+                    $('#providerStreamPanel').hide()
+                    axios.get('/manager/api/provider/' + $('#providerList option:selected').val() + '/live/category', {
+                        responseType: 'json'
+                    }).then(function (providerCategory) {
+                        let template = Handlebars.compile($('#providerCategory-template').html())
+                        let html = template({
+                            category: providerCategory.data
+                        })
+                        $('#providerCategoryPanel').html(html)
+                        $('#providerCategoryPanel').show()
+                        if (providerCategory.data.length > 0) {
+                            $('#providerCategory').on('change', function (element) {
+                                providerStreamUpdate()
+                            })
+                            providerStreamUpdate()
+                        }
+                    })
+                }
+                const providerStreamUpdate = function() {
+                    $('#providerStreamPanel').hide()
+                    axios.get('/manager/api/provider/' + $('#providerList option:selected').val() + '/live/category/' + $('#providerCategory option:selected').val(), {
+                        responseType: 'json'
+                    }).then(function (stream) {
+                        let template = Handlebars.compile($('#providerStream-template').html())
+                        let html = template({
+                            stream: stream.data
+                        })
+                        $('#providerStreamPanel').html(html)
+                        $('#providerStreamPanel').show()
+                        if (stream.data.length > 0) {
+                            $('#providerStreamFilter').on('keyup', function () {
+                                let value = $(this).val().toLowerCase()
+                                $('#providerStream div').filter(function () {
+                                    $(this).toggle($(this).children('#name').text().toLowerCase().indexOf(value) > -1)
+                                })
+                            })
+                        }
+                        // Add provider stream to current playlist category
+                        $('#providerStream div').on('dblclick', function () {
+                            let that = this
+                            let categoryId = $('#playlistCategoryList div.active').attr('category-id')
+                            if (categoryId !== undefined) {
+                                axios.post('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + ':playlistLiveId/category/' + categoryId + '/stream', {
+                                    streamId: $(that).attr('stream-id')
+                                }).then(function () {
+                                    playlistStreamUpdate()
+                                })
+                            }
+                        })
+                        // Add event to copy button
+                        $('#copyLiveStreamToPlaylistCategory').on('click', function () {
+                            bootbox.confirm('<p>Do you want to copy all current provider category streams to category:</p><p class="text-center"><strong>' + $('#playlistCategoryList div.active').text() + '</strong></p>', async function (result) {
+                                if (result) {
+                                    $('#overlay').show()
+                                    let streamCopied = 0
+                                    for (let streamIndex in stream.data) {
+                                        let categoryId = $('#playlistCategoryList div.active').attr('category-id')
+                                        if (categoryId !== undefined) {
+                                            await axios.post('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + ':playlistLiveId/category/' + categoryId + '/stream', {
+                                                streamId: stream.data[streamIndex].id
+                                            })
+                                            streamCopied++
+                                        }
+                                    }
+                                    $('#overlay').hide()
+                                    bootbox.alert(streamCopied + ' stream(s) copied')
+                                    playlistStreamUpdate()
+                                }
+                            })
+                        })
+                    })
+                }
+                const providerSynchronize = function() {
+                    $('#overlay').show()
+                    axios.get('/manager/api/provider/' + $('#providerList option:selected').val() + '/sync').then(function () {
+                        $('#overlay').hide()
+                        providerCategoryUpdate()
+                    })
+                }
+                const providerAdd = function() {
+                    let data = {
+                        name: $('div.modal input[name=providerName]').val(),
+                        host: $('div.modal input[name=providerHost]').val(),
+                        port: $('div.modal input[name=providerPort]').val(),
+                        username: $('div.modal input[name=providerUsername]').val(),
+                        password: $('div.modal input[name=providerPassword]').val()
+                    }
+                    axios.post('/manager/api/provider', data).then(function () {
+                        providerUpdate()
+                        $('div.modal').modal('hide')
+                    })
+                }
+                const providerSave = function() {
+                    let data = {
+                        name: $('div.modal input[name=providerName]').val(),
+                        host: $('div.modal input[name=providerHost]').val(),
+                        port: $('div.modal input[name=providerPort]').val(),
+                        username: $('div.modal input[name=providerUsername]').val(),
+                        password: $('div.modal input[name=providerPassword]').val()
+                    }
+                    axios.put('/manager/api/provider/' + $('#providerList option:selected').val(), data).then(function () {
+                        providerUpdate()
+                        $('div.modal').modal('hide')
+                    })
+                }
+                const playlistUpdate = function(playlistSelected) {
+                    // Hide playlist category and stream
+                    $('#playlistCategoryPanel').hide()
+                    $('#playlistStreamPanel').hide()
+                    // Get playlist list
+                    $('#playlistPanel').hide()
+                    axios.get('/manager/api/playlist/live', {
+                        responseType: 'json'
+                    }).then(function (playlist) {
+                        let template = Handlebars.compile($('#playlistList-template').html())
+                        let html = template({
+                            playlist: playlist.data,
+                            playlistSelected: playlistSelected
+                        })
+                        $('#playlistPanel').html(html)
+                        $('#playlistPanel').show()
+                        $('#playlistAdd').on('click', function () {
+                                let template = Handlebars.compile($('#playlistModalAdd-template').html())
+                                let html = template({
+                                    provider: providerList
+                                })
+                                $('div.modal div.modal-content').html(html)
+                                $('div.modal').modal()
+                                $('#playlistAddButton').on('click', function () {
+                                    playlistAdd()
+                                })
+                                $('#playlistEditButton').on('click', function() {
+                                    playlistEdit()
+                                })
+                            })
+                        $('#playlistEdit').on('click', function () {
+                            let template = Handlebars.compile($('#playlistModalEdit-template').html())
+                            // Get playlist infos
+                            axios.get('/manager/api/playlist/live/' + $('#playlistList option:selected').val(), {
+                                responseType: 'json'
+                            }).then(function (playlistInfos) {
+                                let html = template({
+                                    playlist: playlistInfos.data,
+                                    provider: providerList
+                                })
+                                $('div.modal div.modal-content').html(html)
+                                $('div.modal').modal()
+                                $('#playlistSaveButton').on('click', function () {
+                                    playlistSave()
+                                })
+                            })
+                        })
+                        if (playlist.data.length > 0) {
+                            $('#playlistList').on('change', function () {
+                                playlistCategoryUpdate()
+                            })
+                            $('#playlistDelete').on('click', function () {
+                                bootbox.confirm('Please confirm deletion of ' + $('#playlistList option:selected').text() + ' playlist', function (result) {
+                                    if (result === true) {
+                                        axios.delete('/manager/api/playlist/live/' + $('#playlistList option:selected').val()).then(function () {
+                                            playlistUpdate()
+                                        })
+                                    }
+                                })                               
+                            })
+                            $('#playlistInfo').on('click', function () {
+                                let template = Handlebars.compile($('#playlistModalInfos-template').html())
+                                // Get playlist infos
+                                axios.get('/manager/api/playlist/live/' + $('#playlistList option:selected').val(), {
+                                    responseType: 'json'
+                                }).then(function (playlistInfos) {
+                                    let html = template({
+                                        playlist: playlistInfos.data,
+                                        baseUrl: baseUrl
+                                    })
+                                    $('div.modal div.modal-content').html(html)
+                                    $('div.modal').modal()
+                                })
+                            })
+                            playlistCategoryUpdate()
+                        }
+                    })
+                }
+                playlistUpdate()
+                const playlistCategoryUpdate = function (categoryId = null) {
+                    $('#playlistCategoryPanel').hide()
+                    $('#playlistStreamPanel').hide()
+                    axios.get('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category', {
+                        responseType: 'json'
+                    }).then(function (playlistCategory) {
+                        if (categoryId !== null) {
+                            for (let index in playlistCategory.data) {
+                                if (playlistCategory.data[index].id == categoryId) {
+                                    playlistCategory.data[index].active = true
+                                }
+                            }
+                        }
+                        let template = Handlebars.compile($('#playlistCategory-template').html())
+                        let html = template({
+                            category: playlistCategory.data
+                        })
+                        $('#playlistCategoryPanel').html(html)
+                        $('#playlistCategoryPanel').show()
+                        $('#playlistCategoryAdd').on('click', function () {
+                            let template = Handlebars.compile($('#playlistCategoryModalAdd-template').html())
+                                let html = template()
+                                $('div.modal div.modal-content').html(html)
+                                $('div.modal').modal()
+                                /*
+                                $('div.modal').keypress(function (e) {
+                                    if (e.which === 13) {
+                                        e.preventDefault()
+                                        playlistCategoryAdd()
+                                    }
+                                })
+                                */
+                                $('#playlistCategoryAddButton').on('click', function () {
+                                    playlistCategoryAdd()
+                                })
+                        })
+                        $('#playlistCategoryAction').hide()
+                        if (playlistCategory.data.length > 0) {
+                            $('#playlistCategoryAction').show()
+                            $('#playlistCategoryEdit').on('click', function () {
+                                let template = Handlebars.compile($('#playlistCategoryModalEdit-template').html())
+                                // Get provider infos
+                                axios.get('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id'), {
+                                    responseType: 'json'
+                                }).then(function (playlistCategory) {
+                                    let html = template({
+                                        playlistCategory: playlistCategory.data
+                                    })
+                                    $('div.modal div.modal-content').html(html)
+                                    $('div.modal').modal()
+                                    $('div.modal').keypress(function (e) {
+                                        if (e.which === 13) {
+                                            e.preventDefault()
+                                            playlistCategorySave()
+                                        }
+                                    })
+                                    $('#playlistCategorySaveButton').on('click', function () {
+                                        playlistCategorySave()
+                                    })
+                                })
+                            })
+                            $('#playlistCategoryDelete').on('click', function () {
+                                bootbox.confirm('Please confirm deletion of playlist category ' + $('#playlistCategoryList div.active').text(), function (result) {
+                                    if (result === true) {
+                                        axios.delete('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id')).then(function () {
+                                            playlistCategoryUpdate()
+                                        })
+                                    }
+                                })
+                            })
+                            // Enable sort
+                            Sortable.create(playlistCategoryList, {
+                                handle: '.fa-arrows-alt',
+                                animation: 150,
+                                onEnd: function (event) {
+                                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $(event.item).attr('category-id'), { position: event.newIndex+1 }).then(function () {
+                                        // playlistCategoryUpdate($('#playlistCategoryList div.active').attr('category-id'))
+                                    })
+                                }
+                            })
+                            // Activate first category
+                            $('#playlistCategoryList div').first().addClass('active')
+                            $('#playlistCategoryList').on('click', function (element) {
+                                $('#playlistCategoryList div').removeClass('active')
+                                $(element.target).addClass('active')
+                                playlistStreamUpdate()
+                            })
+                            playlistStreamUpdate()
+                            
+                        }
+                    })
+                }
+                const playlistStreamUpdate = function () {
+                    $('#playlistStreamPanel').hide()
+                    axios.get('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream', {
+                        responseType: 'json'
+                    }).then(function (playlistStream) {
+                        let template = Handlebars.compile($('#playlistStream-template').html())
+                        let html = template({
+                            stream: playlistStream.data
+                        })
+                        $('#playlistStreamPanel').html(html)
+                        $('#playlistStreamPanel').show()
+                        if (playlistStream.data.length > 0) {
+                            // Enable tooltips
+                            $('[data-toggle="tooltip"]').tooltip()
+                            // Enable Sortable
+                            Sortable.create(playlistStreamList, {
+                                handle: '.fa-arrows-alt',
+                                animation: 150,
+                                onEnd: function (event) {
+                                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $(event.item).attr('stream-id'), { position: event.newIndex + 1 }).then(function () {
+                                        playlistStreamUpdate()
+                                    })
+                                }
+                            })
+                            $('.playlistStreamDelete').on('click', function () {
+                                let streamId = $(this).attr('stream-id')
+                                bootbox.confirm('Please confirm deletion this stream', function (result) {
+                                    if (result === true) {
+                                        axios.delete('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + streamId).then(function () {
+                                            playlistStreamUpdate()
+                                        })
+                                    }
+                                })
+                            })
+                            $('.playlistStreamEdit').on('click', function () {
+                                let template = Handlebars.compile($('#playlistStreamModalEdit-template').html())
+                                // Get provider infos
+                                axios.get('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' +  $(this).attr('stream-id'), {
+                                    responseType: 'json'
+                                }).then(function (playlistStreamInfos) {
+                                    let html = template({
+                                        playlistStream: playlistStreamInfos.data
+                                    })
+                                    $('div.modal div.modal-content').html(html)
+                                    $('div.modal').modal()
+                                    $('#playlistStreamSaveButton').on('click', function () {
+                                        playlistStreamSave()
+                                    })
+                                })
+                            })
+                            $('#playlistStreamRename').on('click', function () {
+                                let template = Handlebars.compile($('#playlistStreamModalRename-template').html())
+                                let html = template()
+                                $('div.modal div.modal-content').html(html)
+                                $('div.modal').modal()
+                                $('input[name=playlistStreamRenameSearch]').on('keyup', function () {
+                                    previewResult()
+                                })
+                                $('input[name=playlistStreamRenameReplace]').on('keyup', function () {
+                                    previewResult()
+                                })
+                                $('#playlistStreamRenameSaveButton').on('click', async function () {
+                                    for (let streamIndex in playlistStream.data) {
+                                        let data = {
+                                            name: playlistStream.data[streamIndex].name.replace($('input[name=playlistStreamRenameSearch]').val(), $('input[name=playlistStreamRenameReplace]').val())
+                                        }
+                                        await axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + playlistStream.data[streamIndex].id, data)
+                                    }
+                                    playlistStreamUpdate()
+                                    $('div.modal').modal('hide')
+                                })
+                                previewResult()
+                            })
+                            let previewResult = function () {
+                                let result = []
+                                for (let streamIndex in playlistStream.data) {
+                                    result.push(playlistStream.data[streamIndex].name.replace($('input[name=playlistStreamRenameSearch]').val(), $('input[name=playlistStreamRenameReplace]').val()))
+                                }
+                                $('textarea[name=playlistStreamRenameResult]').val(result.join('\n'))
+                            }
+                        }
+                    })
+                }
+                const playlistAdd = function () {
+                    let data = {
+                        name: $('div.modal input[name=playlistName]').val(),
+                        epgProvider: $('div.modal select[id=epgProvider]').children('option:selected').val()
+                    }
+                    axios.post('/manager/api/playlist/live', data).then(function () {
+                        playlistUpdate()
+                        $('div.modal').modal('hide')
+                    })
+                }
+                const playlistSave = function () {
+                    let data = {
+                        name: $('div.modal input[name=playlistName]').val(),
+                        epgProvider: $('div.modal select[id=epgProvider]').children('option:selected').val()
+                    }
+                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val(), data).then(function () {
+                        playlistUpdate($('#playlistList option:selected').val())
+                        $('div.modal').modal('hide')
+                    })
+                }
+                const playlistCategoryAdd = function () {
+                    let data = {
+                        name: $('div.modal input[name=playlistCategoryName]').val(),
+                    }
+                    axios.post('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category', data).then(function () {
+                        playlistCategoryUpdate()
+                        $('div.modal').modal('hide')
+                    })
+                }
+                const playlistCategorySave = function () {
+                    let data = {
+                        name: $('div.modal input[name=playlistCategoryName]').val()
+                    }
+                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id'), data).then(function () {
+                        playlistCategoryUpdate()
+                        $('div.modal').modal('hide')
+                    })
+                }
+                const playlistStreamSave = function () {
+                    let data = {
+                        name: $('div.modal input[name=playlistStreamName]').val(),
+                        epgChannelId: $('div.modal input[name=playlistStreamEpgId]').val(),
+                        icon: $('div.modal input[name=playlistStreamIcon]').val(),
+                    }
+                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $('div.modal input[name=id]').val(), data).then(function () {
+                        playlistStreamUpdate()
+                        $('div.modal').modal('hide')
+                    })
+                }
+            })
+        </script>
+        <!-- Provider templates -->
+        <script id="providerList-template" type="text/x-handlebars-template">
+            <h5>Provider <small><i class="fa fa-plus-square" id="providerAdd"></i> <i class="fa fa-sync" id="providerSync"></i> <i class="fa fa-pencil-alt" id="providerEdit"></i> <i class="fa fa-trash" id="providerDelete"></i></small></h5>
+            <select id="providerList" class="form-control">
+                {{#each provider}}
+                <option value="{{id}}">{{this.name}}</option>
+                {{/each}}
+            </select>
+        </script>
+        <script id="providerCategory-template" type="text/x-handlebars-template">
+            <label for="providerCategory"><h6>Category</h6></label>
+            <select id="providerCategory" class="form-control">
+                {{#each category}}
+                <option value="{{id}}">{{name}}</option>
+                {{/each}}
+            </select>
+        </script>
+        <script id="providerStream-template" type="text/x-handlebars-template">
+            <div class="panel-heading"><h6>Stream</h6></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <input class="form-control" id="providerStreamFilter" type="search" placeholder="Stream filter">
+                </div>
+                <div id="providerStream" class="list-group">
+                    <div class="row">
+                        <div class="col-lg-8 col-md-12">
+                            <p class="alert alert-dark">Doubleclick to copy stream to playlist category active</p>
+                        </div>
+                        <div class="col-lg-4 col-md-12">
+                            <p><button class="btn btn-secondary" id="copyLiveStreamToPlaylistCategory">Copy all streams</button></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            {{#each stream}}
+                    <div class="list-group-item justify-content-between align-items-center" stream-id="{{id}}">
+                        <span id="name">{{name}}</span>
+                    </div>
+                    {{/each}}
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </script>
+        <script id="providerModalAdd-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Add provider</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="providerName">Name</label>
+                        <input class="form-control" type="text" name="providerName">
+                        <label for="providerHost">Host</label>
+                        <input class="form-control" type="text" name="providerHost" placeholder="Without scheme, only domain or IP">
+                        <label for="providerPort">Port</label>
+                        <input class="form-control" type="text" name="providerPort">
+                        <label for="providerUsername">Username</label>
+                        <input class="form-control" type="text" name="providerUsername">
+                        <label for="providerPassword">Password</label>
+                        <input class="form-control" type="text" name="providerPassword">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="providerAddButton">Add</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+        <script id="providerModalEdit-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit provider {{provider.name}}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="providerName">Name</label>
+                        <input class="form-control" type="text" name="providerName" value="{{provider.name}}">
+                        <label for="providerHost">Host</label>
+                        <input class="form-control" type="text" name="providerHost" placeholder="Without scheme, only domain or IP" value="{{provider.host}}">
+                        <label for="providerPort">Port</label>
+                        <input class="form-control" type="text" name="providerPort" value="{{provider.port}}">
+                        <label for="providerUsername">Username</label>
+                        <input class="form-control" type="text" name="providerUsername" value="{{provider.username}}">
+                        <label for="providerPassword">Password</label>
+                        <input class="form-control" type="text" name="providerPassword" value="{{provider.password}}">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="providerSaveButton">Save</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+        <!-- Playlist templates -->
+        <script id="playlistList-template" type="text/x-handlebars-template">
+            <h5>Playlist <small><i class="fa fa-plus-square" id="playlistAdd"></i> <i class="fa fa-pencil-alt" id="playlistEdit"></i> <i class="fa fa-trash" id="playlistDelete"></i> <i class="fa fa-info" id="playlistInfo"></i></small></h5>
+            <select id="playlistList" class="form-control">
+                {{#each playlist}}
+                <option value="{{id}}" {{{isSelected id ../playlistSelected}}}>{{name}}</option>
+                {{/each}}
+            </select>
+        </script>
+        <script id="playlistCategory-template" type="text/x-handlebars-template">
+            <div class="panel-heading">
+                <h5>Category <small><i class="fa fa-plus-square" id="playlistCategoryAdd"></i> <span id="playlistCategoryAction"><i class="fa fa-pencil-alt" id="playlistCategoryEdit"></i> <i class="fa fa-trash" id="playlistCategoryDelete"></i></span></small></h5>
+            </div>
+            <div class="panel-body">
+                <div class="list-group" id="playlistCategoryList">
+                    {{#each category}}
+                    <div class="list-group-item {{#if active}}active{{/if}}" category-id="{{id}}"><span class="fas fa-arrows-alt" aria-hidden="true"></span> {{name}}</div>
+                    {{/each}}
+                </div>
+            </div>
+        </script>
+        <script id="playlistStream-template" type="text/x-handlebars-template">
+            <div class="panel-heading">
+                <h5>Stream(s) for selected category <small><i class="fa fa-file-signature" id="playlistStreamRename" title="Massive rename"></i></small></h5>
+            </div>
+            <div class="panel-body">
+                <div class="row" id="playlistStreamList">
+                    {{#each stream}}
+                    <div class="col-xl-4 col-lg-4 col-md-6 col-sm-6 col-12" stream-id="{{id}}">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <i class="fa fa-arrows-alt"></i>
+                                    </div>
+                                    <div class="col-sm-6 text-right">
+                                        <span class="badge badge-pill badge-info">{{position}}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body" style="background-image: url('{{icon}}');">
+                                <div class="card-title text-center align-middle">{{name}}{{#if archiveDuration }}<br /><i class="fas fa-history" data-toggle="tooltip" data-html="true" title="Catchup duration {{archiveDuration}} days"></i>{{/if}}</div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <small>{{provider}}</small>
+                                    </div>
+                                    <div class="col-sm-6 text-right">
+                                        <small><i class="fa fa-pencil-alt playlistStreamEdit" title="Edit" id="playlistStreamEdit" stream-id="{{id}}"></i> <i class="fas fa-info" data-toggle="tooltip" data-html="true" title="<p>Stream ID: {{streamId}}<br>Stream name: {{providerStreamName}}<br>Category: {{providerCategory}}</p>" stream-id="{{id}}"></i> <i class="fa fa-trash playlistStreamDelete" title="Delete" id="playlistStreamDelete" stream-id="{{id}}"></i></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </script>
+        <script id="playlistModalAdd-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Add playlist</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="playlistName">Name</label>
+                        <input class="form-control" type="text" name="playlistName">
+                    </div>
+                    <div class="form-group">
+                        <label for="playlistEpgProvider">EPG Provider</label>
+                        <select id="epgProvider" class="form-control">
+                        {{#each provider}}
+                            <option value="{{id}}" {{{isSelected id ../playlist.epgProvider}}}>{{this.name}}</option>
+                            {{/each}}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="playlistAddButton">Add</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+        <script id="playlistModalEdit-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit playlist {{playlist.name}}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="playlistName">Name</label>
+                        <input class="form-control" type="text" name="playlistName" value="{{playlist.name}}">
+                    </div>
+                    <div class="form-group">
+                        <label for="playlistName">EPG provider</label>
+                        <select id="epgProvider" class="form-control">
+                            {{#each provider}}
+                            <option value="{{id}}" {{{isSelected id ../playlist.epgProvider}}}>{{this.name}}</option>
+                            {{/each}}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="playlistSaveButton">Save</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+        <script id="playlistModalInfos-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Playlist {{playlist.name}} informations</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h5>API Xtream Codes access :</h5>
+                <p>Host: {{baseUrl}}<br />Username: {{playlist.id}}<br />Password: x</p>
+                <h5>EPG URL:</h5>
+                <p><a href="{{baseUrl}}/xmltv.php?username={{playlist.id}}&password=x" target="_blank">{{baseUrl}}/xmltv.php?username={{playlist.id}}&password=x</a></p>
+                <h5>Download M3U playlist</h5>
+                <p><a href="{{baseUrl}}/get.php?username={{playlist.id}}&password=x">{{baseUrl}}/get.php?username={{playlist.id}}&password=x</a></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+        <script id="playlistCategoryModalAdd-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Add playlist category</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="playlistCategoryName">Name</label>
+                        <input class="form-control" type="text" name="playlistCategoryName">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="playlistCategoryAddButton">Add</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+        <script id="playlistCategoryModalEdit-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit playlist category {{playlistCategory.name}}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="playlistCategoryName">Name</label>
+                        <input class="form-control" type="text" name="playlistCategoryName" value="{{playlistCategory.name}}">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary" id="playlistCategorySaveButton">Save</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+        <script id="playlistStreamModalEdit-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit stream</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <input type="hidden" name="id" value="{{playlistStream.id}}">
+                    <p>Provider: {{playlistStream.LiveStream.Provider.name}}</p>
+                    <div class="form-group">
+                        <label for="playlistStreamName">Name</label>
+                        <input class="form-control" type="text" id="playlistStreamName" name="playlistStreamName" value="{{playlistStream.name}}" placeholder="{{playlistStream.LiveStream.name}}">
+                        <small id="playlistStreamNameHelp" class="form-text text-muted">Original name: {{playlistStream.LiveStream.name}}</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="playlistStreamEpgId">EPG id</label>
+                        <input class="form-control" type="text" id="playlistStreamEpgId" name="playlistStreamEpgId" value="{{playlistStream.epgChannelId}}" placeholder="{{playlistStream.LiveStream.epgChannelId}}">
+                        <small id="playlistStreamEpgIdHelp" class="form-text text-muted">Original EPG ID: {{playlistStream.LiveStream.epgChannelId}}</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="playlistStreamIcon">Icon url</label>
+                        <input class="form-control" type="text" id="playlistStreamIcon" name="playlistStreamIcon" value="{{playlistStream.icon}}" placeholder="{{playlistStream.LiveStream.icon}}">
+                        <small id="playlistStreamIconHelp" class="form-text text-muted">Original icon: <a href="{{playlistStream.LiveStream.icon}}" target="_blank">{{playlistStream.LiveStream.icon}}</a></small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary" id="playlistStreamSaveButton">Save</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+        <script id="playlistStreamModalRename-template" type="text/x-handlebars-template">
+            <div class="modal-header">
+                <h5 class="modal-title">Massive rename stream name</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="playlistStreamRenameSearch">Search</label>
+                        <input class="form-control" type="text" id="playlistStreamRenameSearch" name="playlistStreamRenameSearch" value="" placeholder="Search characters">
+                    </div>
+                    <div class="form-group">
+                        <label for="playlistStreamRenameReplace">Replace</label>
+                        <input class="form-control" type="text" id="playlistStreamRenameReplace" name="playlistStreamRenameReplace" value="" placeholder="Replace characters">
+                    </div>
+                    <div class="form-group">
+                        <label for="playlistStreamRenameResult">Results</label>
+                        <textarea class="form-control" name="playlistStreamRenameResult" rows="10"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary" id="playlistStreamRenameSaveButton">Update</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </script>
+    </body>
+</html>
