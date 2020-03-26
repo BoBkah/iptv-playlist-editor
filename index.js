@@ -1084,7 +1084,7 @@ expressApp.get('/', function (req, res) {
 // Start service
 expressApp.listen(process.env.LISTEN || 3000, async function () {
   console.log('Playlist editor listening on ' + (process.env.LISTEN || 3000))
-  open('http://localhost:3000')
+  open('http://localhost:' + (process.env.LISTEN || 3000))
 })
 
 // Request HTTP
