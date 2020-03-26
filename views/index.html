@@ -129,7 +129,6 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
         <script>
             Handlebars.registerHelper('isSelected', function (optionValue, selectedValue) {
-                console.log(optionValue, selectedValue)
                 return optionValue == selectedValue ? 'selected' : ''
             })
             var getUrl = window.location;
@@ -143,7 +142,7 @@
             $(document).ready(function () {
                 var providerList = []
                 // Get provider list
-                const providerUpdate = function () {
+                const providerUpdate = function (providerId) {
                     $('#providerPanel').hide()
                     axios.get('/manager/api/provider', {
                         responseType: 'json'
@@ -154,7 +153,8 @@
                         providerList = providers.data
                         let template = Handlebars.compile($('#providerList-template').html())
                         let html = template({
-                            provider: providers.data
+                            provider: providers.data,
+                            providerSelected: providerId
                         })
                         $('#providerPanel').html(html)
                         $('#providerPanel').show()
@@ -188,12 +188,13 @@
                             providerCategoryUpdate()
                         }
                         $('#providerDelete').on('click', function () {
-                            let ack = confirm('Please confirm deletion of ' + $('#providerList option:selected').text() + ' provider')
-                            if (ack === true) {
-                                axios.delete('/manager/api/provider/' + $('#providerList option:selected').val()).then(function () {
-                                    providerUpdate()
-                                })
-                            }
+                            bootbox.confirm('Please confirm deletion of ' + $('#providerList option:selected').text() + ' provider', function (result) {
+                                if (result === true) {
+                                    axios.delete('/manager/api/provider/' + $('#providerList option:selected').val()).then(function () {
+                                        providerUpdate()
+                                    })
+                                }
+                            })
                         })
                     })
                 }
@@ -272,9 +273,12 @@
                         })
                     })
                 }
-                const providerSynchronize = function() {
+                const providerSynchronize = function(providerId) {
+                    if (providerId === undefined) {
+                        providerId = $('#providerList option:selected').val()
+                    }
                     $('#overlay').show()
-                    axios.get('/manager/api/provider/' + $('#providerList option:selected').val() + '/sync').then(function () {
+                    axios.get('/manager/api/provider/' + providerId + '/sync').then(function () {
                         $('#overlay').hide()
                         providerCategoryUpdate()
                     })
@@ -296,8 +300,11 @@
                         username: $('div.modal input[name=providerUsername]').val(),
                         password: $('div.modal input[name=providerPassword]').val()
                     }
-                    axios.post('/manager/api/provider', data).then(function () {
-                        providerUpdate()
+                    axios.post('/manager/api/provider', data).then(function (result) {
+                        if (result.data.hasOwnProperty('providerId')) {
+                            providerUpdate(result.data.providerId)
+                            providerSynchronize(result.data.providerId)
+                        }
                         $('div.modal').modal('hide')
                     })
                 }
@@ -621,10 +628,10 @@
         </script>
         <!-- Provider templates -->
         <script id="providerList-template" type="text/x-handlebars-template">
-            <h5>Provider <small><i class="fa fa-plus-square" id="providerAdd"></i> <i class="fa fa-sync" id="providerSync"></i> <i class="fa fa-pencil-alt" id="providerEdit"></i> <i class="fa fa-trash" id="providerDelete"></i></small></h5>
+            <h5>Provider <small><i class="fa fa-plus-square" id="providerAdd" title="Add provider"></i> <i class="fa fa-sync" id="providerSync" title="Update provider's categories/streams"></i> <i class="fa fa-pencil-alt" id="providerEdit" title="Edit provider"></i> <i class="fa fa-trash" id="providerDelete" title="Delete provider"></i></small></h5>
             <select id="providerList" class="form-control">
                 {{#each provider}}
-                <option value="{{id}}">{{this.name}}</option>
+                <option value="{{id}}" {{{isSelected id ../providerSelected}}}>{{this.name}}</option>
                 {{/each}}
             </select>
         </script>
@@ -722,7 +729,7 @@
         </script>
         <!-- Playlist templates -->
         <script id="playlistList-template" type="text/x-handlebars-template">
-            <h5>Playlist <small><i class="fa fa-plus-square" id="playlistAdd"></i> <i class="fa fa-pencil-alt" id="playlistEdit"></i> <i class="fa fa-trash" id="playlistDelete"></i> <i class="fa fa-info" id="playlistInfo"></i></small></h5>
+            <h5>Playlist <small><i class="fa fa-plus-square" id="playlistAdd" title="Add playlist"></i> <i class="fa fa-pencil-alt" id="playlistEdit" title="Edit playlist"></i> <i class="fa fa-trash" id="playlistDelete" title="Delete playlist"></i> <i class="fa fa-info" id="playlistInfo" title="Display playlist informations"></i></small></h5>
             <select id="playlistList" class="form-control">
                 {{#each playlist}}
                 <option value="{{id}}" {{{isSelected id ../playlistSelected}}}>{{name}}</option>
@@ -731,7 +738,7 @@
         </script>
         <script id="playlistCategory-template" type="text/x-handlebars-template">
             <div class="panel-heading">
-                <h5>Category <small><i class="fa fa-plus-square" id="playlistCategoryAdd"></i> <span id="playlistCategoryAction"><i class="fa fa-pencil-alt" id="playlistCategoryEdit"></i> <i class="fa fa-trash" id="playlistCategoryDelete"></i></span></small></h5>
+                <h5>Category <small><i class="fa fa-plus-square" id="playlistCategoryAdd" title="Add playlist category"></i> <span id="playlistCategoryAction"><i class="fa fa-pencil-alt" id="playlistCategoryEdit" title="Edit playlist category"></i> <i class="fa fa-trash" id="playlistCategoryDelete" title="Delete playlist category"></i></span></small></h5>
             </div>
             <div class="panel-body">
                 <div class="list-group" id="playlistCategoryList">

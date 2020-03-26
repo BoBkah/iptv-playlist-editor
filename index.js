@@ -81,7 +81,10 @@ expressApp.post('/manager/api/provider', function (req, res) {
   }
   // Add to database
   db.Provider.create(body).then(function (provider) {
-    res.status(200).send('Provider added')
+    res.status(200).json({
+      'message': 'Provider successfully added',
+      'providerId': provider.id
+    })
   }).catch(function (error) {
     if (error) {
       res.status(500).send(error.message)
