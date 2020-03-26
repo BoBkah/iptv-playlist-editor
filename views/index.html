@@ -148,6 +148,9 @@
                     axios.get('/manager/api/provider', {
                         responseType: 'json'
                     }).then(function (providers) {
+                        if (providers.data.length === 0) {
+                            providerModalAdd()
+                        }
                         providerList = providers.data
                         let template = Handlebars.compile($('#providerList-template').html())
                         let html = template({
@@ -156,13 +159,7 @@
                         $('#providerPanel').html(html)
                         $('#providerPanel').show()
                         $('#providerAdd').on('click', function () {
-                            let template = Handlebars.compile($('#providerModalAdd-template').html())
-                            let html = template()
-                            $('div.modal div.modal-content').html(html)
-                            $('div.modal').modal()
-                            $('#providerAddButton').on('click', function () {
-                                providerAdd()
-                            })
+                            providerModalAdd()
                         })
                         $('#providerEdit').on('click', function () {
                             let template = Handlebars.compile($('#providerModalEdit-template').html())
@@ -280,6 +277,15 @@
                     axios.get('/manager/api/provider/' + $('#providerList option:selected').val() + '/sync').then(function () {
                         $('#overlay').hide()
                         providerCategoryUpdate()
+                    })
+                }
+                const providerModalAdd = function () {
+                    let template = Handlebars.compile($('#providerModalAdd-template').html())
+                    let html = template()
+                    $('div.modal div.modal-content').html(html)
+                    $('div.modal').modal()
+                    $('#providerAddButton').on('click', function () {
+                        providerAdd()
                     })
                 }
                 const providerAdd = function() {
