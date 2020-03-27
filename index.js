@@ -21,6 +21,7 @@ let mailTransporter = nodemailer.createTransport({
 // Express server
 let expressApp = express()
 expressApp.use(express.json())
+expressApp.use(express.static('assets'))
 expressApp.set('view engine', 'pug')
 // Logs
 expressApp.use(function (req, res, next) {

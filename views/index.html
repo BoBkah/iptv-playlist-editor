@@ -2,9 +2,13 @@
     <head>
         <meta charset="utf-8">
         <title>IPTV playlist editor</title>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous"> -->
+        <link rel="stylesheet" href="/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
         <style>
+            .content {
+                padding-top: 20px;
+            }
             #overlay {
                 display: none;
                 position: fixed;
@@ -22,6 +26,9 @@
                 position: absolute;
                 top: 50%;
                 left: 50%;
+            }
+            #providerStream button {
+                width: 100%;
             }
             i {
                 cursor: pointer;
@@ -55,10 +62,7 @@
             .list-group-item {
                 padding-left: 0.5em;
             }
-            .list-group-item.active {
-                background-color: #17a2b8;
-                border-color: #17a2b8;
-            }
+
             .tooltip.show p {
                 text-align:left;
             }
@@ -66,15 +70,23 @@
                 max-width: 350px;
             }
             h5>small>i:first-child {
-                margin-left: 1rem;
+                margin-left: 0.75rem;
+            }
+            h5>small i {
+                margin-right: 0.2rem;
             }
         </style>
     </head>
     <body>
-        <div class="container-fluid">
-            <h1>IPTV playlist editor</h1>
+        <div class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a href="/manager" class="navbar-brand">IPTV playlist editor</a>
+                <a class="nav navbar-nav navbar-right" href="https://github.com/BoBkah/iptv-playlist-editor" target="_blank"><i class="fab fa-github"></i></a>
+            </div>
+        </div>
+        <div class="container-fluid content">
             <div class="row">
-                <div class="col-xl-3 col-4">
+                <div class="col-xl-3 col-lg-3 col-md-4">
                     <div class="row">
                         <div class="col">
                             <div class="form-group" id="providerPanel"></div>
@@ -91,17 +103,17 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-9 col-8">
+                <div class="col-xl-9 col-lg-9 col-md-8">
                     <div class="row">
                         <div class="col">
                             <div class="form-group" id="playlistPanel"></div>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-4">
+                        <div class="col-xl-3 col-lg-4 col-4">
                             <div class="panel" id="playlistCategoryPanel"></div>
                         </div>
-                        <div class="col-8">
+                        <div class="col-xl-9 col-lg-8 col-8">
                             <div class="panel" id="playlistStreamPanel"></div>
                         </div>
                     </div>
@@ -233,7 +245,7 @@
                         if (stream.data.length > 0) {
                             $('#providerStreamFilter').on('keyup', function () {
                                 let value = $(this).val().toLowerCase()
-                                $('#providerStream div').filter(function () {
+                                $('#providerStream div.list-group-item').filter(function () {
                                     $(this).toggle($(this).children('#name').text().toLowerCase().indexOf(value) > -1)
                                 })
                             })
@@ -650,14 +662,8 @@
                     <input class="form-control" id="providerStreamFilter" type="search" placeholder="Stream filter">
                 </div>
                 <div id="providerStream" class="list-group">
-                    <div class="row">
-                        <div class="col-lg-8 col-md-12">
-                            <p class="alert alert-dark">Doubleclick to copy stream to playlist category active</p>
-                        </div>
-                        <div class="col-lg-4 col-md-12">
-                            <p><button class="btn btn-secondary" id="copyLiveStreamToPlaylistCategory">Copy all streams</button></p>
-                        </div>
-                    </div>
+                    <p class="text-muted">Doubleclick to copy stream</p>
+                    <p><button class="btn btn-success" id="copyLiveStreamToPlaylistCategory">Copy all streams</button></p>
                     <div class="row">
                         <div class="col">
                             {{#each stream}}
@@ -755,7 +761,7 @@
             <div class="panel-body">
                 <div class="row" id="playlistStreamList">
                     {{#each stream}}
-                    <div class="col-xl-4 col-lg-4 col-md-6 col-sm-6 col-12" stream-id="{{id}}">
+                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12" stream-id="{{id}}">
                         <div class="card">
                             <div class="card-header">
                                 <div class="row">
@@ -763,7 +769,7 @@
                                         <i class="fa fa-arrows-alt"></i>
                                     </div>
                                     <div class="col-sm-6 text-right">
-                                        <span class="badge badge-pill badge-info">{{position}}</span>
+                                        <span class="badge badge-pill badge-primary">{{position}}</span>
                                     </div>
                                 </div>
                             </div>

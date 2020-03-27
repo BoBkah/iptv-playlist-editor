@@ -1,8 +1,9 @@
 {
-  "name": "xtream-codes-proxy",
+  "name": "iptv-playlist-editor",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "bin": "index.js",
   "dependencies": {
     "express": "^4.17.1",
     "node-fetch": "^2.6.0",
@@ -17,7 +18,10 @@
     "sequelize-cli": "^5.5.1"
   },
   "pkg": {
-    "script": "build/**/*.js",
-    "assets": "views/**/*"
+    "script": ["build/**/*.js", "config/**/*.js"],
+    "assets": ["views/**/*"],
+    "targets": [
+      "node12"
+    ]
   }
 }
