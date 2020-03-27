@@ -30,6 +30,14 @@
             #providerStream button {
                 width: 100%;
             }
+            #providerStream div.list-group-item {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
             i {
                 cursor: pointer;
             }
@@ -258,6 +266,7 @@
                                 axios.post('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + ':playlistLiveId/category/' + categoryId + '/stream', {
                                     streamId: $(that).attr('stream-id')
                                 }).then(function () {
+                                    $(that).fadeOut(150).fadeIn(150)
                                     playlistStreamUpdate()
                                 })
                             }
@@ -662,7 +671,7 @@
                     <input class="form-control" id="providerStreamFilter" type="search" placeholder="Stream filter">
                 </div>
                 <div id="providerStream" class="list-group">
-                    <p class="text-muted">Doubleclick to copy stream</p>
+                    <p class="text-muted">Double click to copy stream</p>
                     <p><button class="btn btn-success" id="copyLiveStreamToPlaylistCategory">Copy all streams</button></p>
                     <div class="row">
                         <div class="col">
