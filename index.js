@@ -2,6 +2,7 @@ const express = require('express')
 const fetch = require('node-fetch')
 const nodemailer = require('nodemailer')
 const open = require('open')
+const os = require('os')
 const path = require('path')
 const querystring = require('querystring')
 const db = require('./models')
@@ -1088,7 +1089,17 @@ expressApp.get('/', function (req, res) {
 // Start service
 expressApp.listen(process.env.LISTEN || 3000, async function () {
   console.log('Playlist editor listening on ' + (process.env.LISTEN || 3000))
-  open('http://localhost:' + (process.env.LISTEN || 3000))
+  // Find local ip address
+  let networkInterfaces = os.networkInterfaces()
+  let localIp = ''
+  Object.keys(networkInterfaces).forEach(function (interfaceName) {
+    networkInterfaces[interfaceName].forEach(function (interface) {
+      if (interface.internal === false && interface.family === 'IPv4' && localIp === '') {
+        localIp = interface.address
+      }
+    })
+  })
+  open('http://' + localIp + ':' + (process.env.LISTEN || 3000))
 })
 
 // Request HTTP
