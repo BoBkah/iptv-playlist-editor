@@ -1,6 +1,7 @@
 'use strict'
+const Sequelize = require('sequelize')
 module.exports = {
-  up: (queryInterface, Sequelize) => {
+  up: (queryInterface) => {
     return Promise.all([
       queryInterface.createTable('EpgTag', {
         id: {

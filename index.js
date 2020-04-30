@@ -59,6 +59,12 @@ const mailTransporter = nodemailer.createTransport({
     rejectUnauthorized: false
   }
 })
+
+// Migrate database
+db.migrate().then(function () {
+  epgGrabber.init(db)
+})
+
 // Express server
 const expressApp = express()
 expressApp.use(compression())
@@ -79,7 +85,6 @@ expressApp.get('/manager', function (req, res) {
 /**
  * EPG
  */
-epgGrabber.init(db)
 // List EPGs
 expressApp.get('/manager/api/epg', function (req, res) {
   db.Epg.findAll({

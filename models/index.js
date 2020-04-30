@@ -6,7 +6,9 @@ const Sequelize = require('sequelize')
 const Umzug = require('umzug')
 const basename = path.basename(__filename)
 const env = process.env.NODE_ENV || 'development'
-const db = {}
+const db = {
+  migrationComplete: false
+}
 
 // Load config
 const configData = fs.readFileSync(path.join(process.cwd(), 'config/config.json'))
@@ -41,21 +43,30 @@ Object.keys(db).forEach(modelName => {
 })
 
 // Migrate database
-const umzug = new Umzug({
-  migrations: {
-    path: path.join(__dirname, '/../migrations'),
-    params: [
-      sequelize.getQueryInterface()
-    ]
-  },
-  storage: 'sequelize',
-  storageOptions: {
-    sequelize: sequelize
-  }
-})
-umzug.up()
+const migrate = function () {
+  const umzug = new Umzug({
+    migrations: {
+      path: path.join(__dirname, '/../migrations'),
+      params: [
+        sequelize.getQueryInterface()
+      ]
+    },
+    storage: 'sequelize',
+    storageOptions: {
+      sequelize: sequelize
+    }
+  })
+  return new Promise(function (resolve, reject) {
+    umzug.up().then(function (result) {
+      return resolve()
+    }).catch(function (error) {
+      return reject(error)
+    })
+  })
+}
 
 db.sequelize = sequelize
 db.Sequelize = Sequelize
+db.migrate = migrate
 
 module.exports = db
