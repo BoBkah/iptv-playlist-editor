@@ -1,8 +1,14 @@
 {
   "development": {
     "dialect": "sqlite",
+    "dialectOptions": {
+      "user": "root",
+      "password": "",
+      "host": "localhost",
+      "database": "iptv-test"
+    },
     "storage": "database/live.sqlite",
-    "loggin": true,
+    "logging": false,
     "email": {
       "host": "localhost",
       "port": 25,
@@ -14,7 +20,7 @@
   "test": {
     "dialect": "sqlite",
     "storage": "memory",
-    "loggin": true,
+    "logging": false,
     "email": {
       "host": "localhost",
       "port": 25,
@@ -26,7 +32,7 @@
   "production": {
     "dialect": "sqlite",
     "storage": "database/live.sqlite",
-    "loggin": false,
+    "logging": false,
     "email": {
       "host": "localhost",
       "port": 25,

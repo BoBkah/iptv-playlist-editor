@@ -4,3 +4,4 @@ package-lock.json
 database/*
 !database/.gitkeep
 build/*
+temp/*

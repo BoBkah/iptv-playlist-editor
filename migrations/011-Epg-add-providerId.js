@@ -1,8 +1,8 @@
 'use strict'
-const Sequelize = require('sequelize')
+
 module.exports = {
   up: (queryInterface) => {
-    return queryInterface.addColumn('PlaylistLive', 'epgProvider', {
+    return queryInterface.addColumn('Epg', 'providerId', {
       type: 'integer',
       references: {
         model: 'Provider',
@@ -13,6 +13,6 @@ module.exports = {
     })
   },
   down: (queryInterface) => {
-    return queryInterface.removeColumn('PlaylistLive', 'epgProvider')
+    return queryInterface.removeColumn('Epg', 'providerId')
   }
-};
+}

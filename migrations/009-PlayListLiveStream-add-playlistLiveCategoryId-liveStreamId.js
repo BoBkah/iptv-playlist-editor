@@ -1,21 +1,20 @@
 'use strict'
-const Sequelize = require('sequelize')
 module.exports = {
   up: (queryInterface) => {
     return Promise.all([
-      queryInterface.addColumn('LiveStream', 'providerId', {
+      queryInterface.addColumn('PlaylistLiveStream', 'playlistLiveCategoryId', {
         type: 'integer',
         references: {
-          model: 'Provider',
+          model: 'PlaylistLiveCategory',
           key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       }),
-      queryInterface.addColumn('LiveStream', 'liveCategoryId', {
+      queryInterface.addColumn('PlaylistLiveStream', 'liveStreamId', {
         type: 'integer',
         references: {
-          model: 'LiveCategory',
+          model: 'LiveStream',
           key: 'id'
         },
         onUpdate: 'CASCADE',
@@ -25,8 +24,8 @@ module.exports = {
   },
   down: (queryInterface) => {
     return Promise.all([
-      queryInterface.removeColumn('LiveStream', 'providerId'),
-      queryInterface.removeColumn('LiveStream', 'liveCategoryId')
+      queryInterface.removeColumn('PlaylistLiveStream', 'playlistLiveCategoryId'),
+      queryInterface.removeColumn('PlaylistLiveStream', 'liveStreamId')
     ])
   }
 }

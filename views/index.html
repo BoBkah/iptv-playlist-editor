@@ -3,7 +3,7 @@
         <meta charset="utf-8">
         <title>IPTV playlist editor</title>
         <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous"> -->
-        <link rel="stylesheet" href="/bootstrap.min.css">
+        <link rel="stylesheet" href="/lib/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
         <style>
             .content {
@@ -86,48 +86,16 @@
         </style>
     </head>
     <body>
-        <div class="navbar navbar-expand-lg navbar-dark bg-primary">
-            <div class="container-fluid">
-                <a href="/manager" class="navbar-brand">IPTV playlist editor</a>
-                <a class="nav navbar-nav navbar-right" href="https://github.com/BoBkah/iptv-playlist-editor" target="_blank"><i class="fab fa-github"></i></a>
-            </div>
+        <div class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 border-bottom bg-primary shadow-sm text-light">
+            <h5 class="my-0 mr-md-auto font-weight-normal ">IPTV playlist editor</h5>
+            <nav class="my-2 my-md-0 mr-md-3 nav">
+                <a class="nav-link p-2 text-light" id="nav-playlist" href="#playlist">Playlist</a>
+                <a class="nav-link p-2 text-light" id="nav-epg" href="#epg">EPG</a>
+            </nav>
+            <a class="nav-link p-2 text-light" href="https://github.com/BoBkah/iptv-playlist-editor" target="_blank"><i class="fab fa-github"></i></a>
         </div>
-        <div class="container-fluid content">
-            <div class="row">
-                <div class="col-xl-3 col-lg-3 col-md-4">
-                    <div class="row">
-                        <div class="col">
-                            <div class="form-group" id="providerPanel"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col">
-                            <div class="form-group" id="providerCategoryPanel"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col">
-                            <div class="panel" id="providerStreamPanel"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-9 col-lg-9 col-md-8">
-                    <div class="row">
-                        <div class="col">
-                            <div class="form-group" id="playlistPanel"></div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-xl-3 col-lg-4 col-4">
-                            <div class="panel" id="playlistCategoryPanel"></div>
-                        </div>
-                        <div class="col-xl-9 col-lg-8 col-8">
-                            <div class="panel" id="playlistStreamPanel"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="container-fluid content" id="page"></div>    
+        
         <!-- Overlay spinner -->
         <div id="overlay">
             <div class="spinner-border" role="status">
@@ -149,7 +117,40 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
         <script>
             Handlebars.registerHelper('isSelected', function (optionValue, selectedValue) {
-                return optionValue == selectedValue ? 'selected' : ''
+                if (Array.isArray(selectedValue)) {
+                   for (let arrayIndex in selectedValue) {
+                       if (selectedValue[arrayIndex].id == optionValue) {
+                           return 'selected'
+                       }
+                   }
+                   return ''
+                } else {
+                    return optionValue == selectedValue ? 'selected' : ''
+                }
+            })
+            Handlebars.registerHelper('isChecked', function (optionValue, selectedValue) {
+                if (Array.isArray(selectedValue)) {
+                   for (let arrayIndex in selectedValue) {
+                       if (selectedValue[arrayIndex].id == optionValue) {
+                           return 'checked'
+                       }
+                   }
+                   return ''
+                } else {
+                    return optionValue == selectedValue ? 'checked' : ''
+                }
+            })
+            Handlebars.registerHelper('getPriority', function (id, list) {
+                if (Array.isArray(list)) {
+                    for (let arrayIndex in list) {
+                        if (list[arrayIndex].id == id) {
+                            return list[arrayIndex].PlaylistLiveEpg.priority
+                        }
+                    }
+                    return 0
+                } else {
+                    return 0
+                }
             })
             var getUrl = window.location;
             var baseUrl = getUrl .protocol + "//" + getUrl.host;
@@ -160,8 +161,8 @@
                 }
             })
             $(document).ready(function () {
+                // Provider
                 var providerList = []
-                // Get provider list
                 const providerUpdate = function (providerId) {
                     $('#providerPanel').hide()
                     axios.get('/manager/api/provider', {
@@ -218,7 +219,6 @@
                         })
                     })
                 }
-                providerUpdate()
                 const providerCategoryUpdate = function() {
                     $('#providerCategoryPanel').hide()
                     $('#providerStreamPanel').hide()
@@ -327,6 +327,8 @@
                             providerSynchronize(result.data.providerId)
                         }
                         $('div.modal').modal('hide')
+                        // Update EPG list
+                        epgUpdate()
                     })
                 }
                 const providerSave = function() {
@@ -342,6 +344,7 @@
                         $('div.modal').modal('hide')
                     })
                 }
+                // Playlist
                 const playlistUpdate = function(playlistSelected) {
                     // Hide playlist category and stream
                     $('#playlistCategoryPanel').hide()
@@ -361,7 +364,7 @@
                         $('#playlistAdd').on('click', function () {
                                 let template = Handlebars.compile($('#playlistModalAdd-template').html())
                                 let html = template({
-                                    provider: providerList
+                                    epg: epgList
                                 })
                                 $('div.modal div.modal-content').html(html)
                                 $('div.modal').modal()
@@ -380,7 +383,7 @@
                             }).then(function (playlistInfos) {
                                 let html = template({
                                     playlist: playlistInfos.data,
-                                    provider: providerList
+                                    epg: epgList
                                 })
                                 $('div.modal div.modal-content').html(html)
                                 $('div.modal').modal()
@@ -420,7 +423,6 @@
                         }
                     })
                 }
-                playlistUpdate()
                 const playlistCategoryUpdate = function (categoryId = null) {
                     $('#playlistCategoryPanel').hide()
                     $('#playlistStreamPanel').hide()
@@ -599,8 +601,18 @@
                 const playlistAdd = function () {
                     let data = {
                         name: $('div.modal input[name=playlistName]').val(),
-                        epgProvider: $('div.modal select[id=epgProvider]').children('option:selected').val()
                     }
+                    let epgSelected = []
+                    $('div.modal table input[type=checkbox]').each(function () {
+                        if ($(this).is(':checked')) {
+                            console.log($(this).val())
+                            epgSelected.push({
+                                id: $(this).val(),
+                                priority: $('#priority' + $(this).val()).val()
+                            })
+                        }
+                    })
+                    data.epg = epgSelected
                     axios.post('/manager/api/playlist/live', data).then(function () {
                         playlistUpdate()
                         $('div.modal').modal('hide')
@@ -609,8 +621,18 @@
                 const playlistSave = function () {
                     let data = {
                         name: $('div.modal input[name=playlistName]').val(),
-                        epgProvider: $('div.modal select[id=epgProvider]').children('option:selected').val()
                     }
+                    let epgSelected = []
+                    $('div.modal table input[type=checkbox]').each(function () {
+                        if ($(this).is(':checked')) {
+                            console.log($(this).val())
+                            epgSelected.push({
+                                id: $(this).val(),
+                                priority: $('#priority' + $(this).val()).val()
+                            })
+                        }
+                    })
+                    data.epg = epgSelected
                     axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val(), data).then(function () {
                         playlistUpdate($('#playlistList option:selected').val())
                         $('div.modal').modal('hide')
@@ -645,7 +667,133 @@
                         $('div.modal').modal('hide')
                     })
                 }
+                // EPG
+                let epgList = []
+                const epgUpdate = function () {
+                    axios.get('/manager/api/epg', {
+                        responseType: 'json'
+                    }).then(function (epgs) {
+                        epgList = epgs.data
+                        let template = Handlebars.compile($('#EPGList-template').html())
+                        let html = template({
+                            epg: epgs.data
+                        })
+                        $('#epgContent').html(html)
+                        $('.epgButtonDisable').each(function () {
+                            $(this).on('click', function () {
+                                axios.put('/manager/api/epg/' + $(this).attr('epg-id'), {
+                                    status: false
+                                }).then(function () {
+                                    epgUpdate()
+                                })
+                            })
+                        })
+                        $('.epgButtonEnable').each(function () {
+                            $(this).on('click', function () {
+                                axios.put('/manager/api/epg/' + $(this).attr('epg-id'), {
+                                    status: true
+                                }).then(function () {
+                                    epgUpdate()
+                                })
+                            })
+                        })
+                    })
+                }
+                epgUpdate()
+                // Page
+                const changePage = function () {
+                    console.log(window.location.hash)
+                    $('nav a').removeClass("active")
+                    switch (window.location.hash) {
+                        case '#epg':
+                            $('#nav-epg').addClass("active")
+                            let epgTemplate = Handlebars.compile($('#page-epg-template').html())
+                            $('#page').html(epgTemplate())
+                            epgUpdate()
+                            break
+                        case '#playlist':
+                        default:
+                            $('#nav-playlist').addClass("active")
+                            let playlistTemplate = Handlebars.compile($('#page-playlist-template').html())
+                            $('#page').html(playlistTemplate())
+                            providerUpdate()
+                            playlistUpdate()
+                            break
+                    }
+                }
+                $(window).on('hashchange', function () {
+                    changePage()
+                })
+                changePage()
             })
+        </script>
+        <!-- Page templates -->
+        <script id="page-playlist-template" type="text/x-handlebars-template">
+                <div class="row">
+                    <div class="col-xl-3 col-lg-3 col-md-4">
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group" id="providerPanel"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group" id="providerCategoryPanel"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="panel" id="providerStreamPanel"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-9 col-lg-9 col-md-8">
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group" id="playlistPanel"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xl-3 col-lg-4 col-4">
+                                <div class="panel" id="playlistCategoryPanel"></div>
+                            </div>
+                            <div class="col-xl-9 col-lg-8 col-8">
+                                <div class="panel" id="playlistStreamPanel"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </script>
+        <script id="page-epg-template" type="text/x-handlebars-template">
+            <div class="row">
+                <div class="col-12" id="epgContent"></div>
+            </div>
+        </script>
+        <!-- EPG templates -->
+        <script id="EPGList-template" type="text/x-handlebars-template">
+            <h2>EPG list</h2>
+            <table class="table table-sm table-hover">
+                <thead class="thead-dark">
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col"># Channels</th>
+                        <th scope="col">First program</th>
+                        <th scope="col">Last program</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each epg}}
+                    <tr {{#unless status}} class="table-dark" {{/unless}}>
+                        <td>{{name}}</td>
+                        <td>{{channels}}</td>
+                        <td>{{min}}</td>
+                        <td>{{max}}</td>
+                        <td>{{#if status}}<button type="button" class="btn btn-secondary btn-sm epgButtonDisable" epg-id="{{id}}">Disable</button>{{else}}<button type="button" class="btn btn-success btn-sm epgButtonEnable" epg-id="{{id}}">Enable</button>{{/if}} <button class="btn btn-sm btn-primary epgButtonUpdate" epg-id="{{id}}">Update</button></td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+              </table>
         </script>
         <!-- Provider templates -->
         <script id="providerList-template" type="text/x-handlebars-template">
@@ -678,6 +826,11 @@
                             {{#each stream}}
                     <div class="list-group-item justify-content-between align-items-center" stream-id="{{id}}">
                         <span id="name">{{name}}</span>
+                        {{#if archiveDuration}}
+                        <span class="float-right">
+                            <small><i class="fas fa-history" title="Catchup duration {{archiveDuration}} days"></i> {{archiveDuration}} days</small>
+                        </span>
+                        {{/if}}
                     </div>
                     {{/each}}
                         </div>
@@ -815,12 +968,26 @@
                         <input class="form-control" type="text" name="playlistName">
                     </div>
                     <div class="form-group">
-                        <label for="playlistEpgProvider">EPG Provider</label>
-                        <select id="epgProvider" class="form-control">
-                        {{#each provider}}
-                            <option value="{{id}}" {{{isSelected id ../playlist.epgProvider}}}>{{this.name}}</option>
-                            {{/each}}
-                        </select>
+                        <label for="playlistEpgProvider">EPG</label>
+                        <table class="table table-sm">
+                            <thead>
+                              <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">EPG name</th>
+                                <th scope="col">Priority weight</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                        {{#each epg}}
+                                <tr>
+                                    <td class="align-middle"><input class="" type="checkbox" value="{{id}}" name="epg[]" id="check{{this.name}}"></td>
+                                    <td class="align-middle"><label class="" for="check{{this.name}}">{{this.name}}</label></td>
+                                    <td class="align-middle"><input type="text" id="priority{{this.id}}" size="2" value="0"></td>
+                                </tr>
+                        {{/each}}
+                            </tbody>
+                        </table>
+                        <small>Used to generate XLMTV EPG for your playlists streams</small>
                     </div>
                 </form>
             </div>
@@ -843,12 +1010,26 @@
                         <input class="form-control" type="text" name="playlistName" value="{{playlist.name}}">
                     </div>
                     <div class="form-group">
-                        <label for="playlistName">EPG provider</label>
-                        <select id="epgProvider" class="form-control">
-                            {{#each provider}}
-                            <option value="{{id}}" {{{isSelected id ../playlist.epgProvider}}}>{{this.name}}</option>
-                            {{/each}}
-                        </select>
+                        <label for="playlistEpgProvider">EPG</label>
+                        <table class="table table-sm">
+                            <thead>
+                              <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">EPG name</th>
+                                <th scope="col">Priority weight</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                        {{#each epg}}
+                                <tr>
+                                    <td class="align-middle"><input class="" type="checkbox" value="{{id}}" name="epg[]" id="check{{this.name}}" {{{isChecked id ../playlist.Epgs}}}></td>
+                                    <td class="align-middle"><label class="" for="check{{this.name}}">{{this.name}}</label></td>
+                                    <td class="align-middle"><input type="text" id="priority{{this.id}}" size="2" value="{{{getPriority id ../playlist.Epgs}}}"></td>
+                                </tr>
+                        {{/each}}
+                            </tbody>
+                        </table>
+                        <small>Used to generate XLMTV EPG for your playlists streams</small>
                     </div>
                 </form>
             </div>
