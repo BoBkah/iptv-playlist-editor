@@ -30,6 +30,7 @@ if (IS_PACKAGED) {
 */
 const compression = require('compression')
 const express = require('express')
+const bodyParser = require('body-parser')
 const fetch = require('node-fetch')
 const moment = require('moment')
 const nodemailer = require('nodemailer')
@@ -68,9 +69,11 @@ db.migrate().then(function () {
 // Express server
 const expressApp = express()
 expressApp.use(compression())
-expressApp.use(express.json())
+// expressApp.use(express.json())
 expressApp.use(express.static(path.join(__dirname, '/views')))
 expressApp.set('view engine', 'pug')
+expressApp.use(bodyParser.json())
+expressApp.use(bodyParser.urlencoded({ extended: true }))
 // Logs
 expressApp.use(function (req, res, next) {
   console.log('[API] ' + req.connection.remoteAddress + ' "' + req.method + ' ' + req._parsedUrl.path + '"')
@@ -1115,6 +1118,112 @@ expressApp.get('/get.php', function (req, res) {
   })
 })
 // Xtream API
+expressApp.post('/panel_api.php', function (req, res) {
+  if (!Object.prototype.hasOwnProperty.call(req.body, 'username') || !Object.prototype.hasOwnProperty.call(req.body, 'password')) {
+    return res.status(400).send('Bad request')
+  }
+  const action = Object.prototype.hasOwnProperty.call(req.params, 'action') ? req.params.action : ''
+  switch (action) {
+    case 'get_epg':
+      break
+    default:
+      db.Provider.findAll().then(async function (providers) {
+        if (providers === null) {
+          return res.status(404).send('No provider available')
+        }
+        const playlistLive = await db.PlaylistLive.findByPk(req.body.username)
+        if (playlistLive === null) {
+          return res.status(404).send('No playlist available')
+        }
+        fetch('http://' + providers[0].host + ':' + providers[0].port + '/player_api.php?username=' + providers[0].username + '&password=' + providers[0].password).then(function (result) {
+          return result.json()
+        }).then(async function (result) {
+          console.log(req.headers.host.split(':').shift())
+          console.log(req.headers.host.split(':').pop())
+          const output = {
+            user_info: {
+              username: req.body.username,
+              password: req.body.password,
+              auth: 1,
+              status: 'Active',
+              exp_date: '1593590150',
+              is_trial: '0',
+              active_cons: 0,
+              created_at: parseInt(playlistLive.createdAt.getTime() / 1000),
+              max_connections: result.user_info.max_connections,
+              allowed_output_formats: result.user_info.allowed_output_formats
+            },
+            server_info: {
+              url: req.hostname,
+              port: req.headers.host.split(':').pop(),
+              server_protocol: 'http'
+            },
+            available_channels: {},
+            categories: {
+              live: [],
+              series: [],
+              movie: []
+            }
+          }
+          // Get live categories
+          const liveCategories = await db.PlaylistLiveCategory.findAll({
+            where: {
+              playlistLiveId: req.body.username
+            },
+            order: [
+              ['position', 'ASC']
+            ],
+            attributes: [
+              'id', 'name'
+            ]
+          })
+          for (const liveCategoriesIndex in liveCategories) {
+            output.categories.live.push({
+              category_id: liveCategories[liveCategoriesIndex].id,
+              category_name: liveCategories[liveCategoriesIndex].name,
+              parent_id: 0
+            })
+          }
+          // Get live channels
+          const streams = await db.PlaylistLiveStream.findAll({
+            order: [
+              ['position', 'ASC']
+            ],
+            include: [db.LiveStream, db.PlaylistLiveCategory]
+          })
+          for (const index in streams) {
+            output.available_channels[streams[index].id] = {
+              num: streams[index].position,
+              name: streams[index].name === null ? streams[index].LiveStream.name : streams[index].name,
+              stream_type: 'live',
+              type_name: 'Live Streams',
+              stream_id: streams[index].liveStreamId,
+              stream_icon: streams[index].icon === null ? streams[index].LiveStream.icon : streams[index].icon,
+              epg_channel_id: streams[index].epgChannelId === null ? streams[index].LiveStream.epgChannelId === null ? '' : streams[index].LiveStream.epgChannelId.toLowerCase() : streams[index].epgChannelId.toLowerCase(),
+              added: String(Date.parse(streams[index].createdAt) / 1000),
+              category_id: streams[index].PlaylistLiveCategory.id,
+              category_name: streams[index].PlaylistLiveCategory.name,
+              series_no: null,
+              live: 1,
+              container_extension: null,
+              custom_sid: streams[index].LiveStream.serviceId,
+              tv_archive: streams[index].LiveStream.archive,
+              direct_source: '',
+              tv_archive_duration: streams[index].LiveStream.archiveDuration
+            }
+          }
+          return res.json(output)
+        }).catch(function (error) {
+          if (error) {
+            console.error(error)
+          }
+          return res.status(404).send('No provider available')
+        })
+      }).catch(function (error) {
+        res.status(500).send(error.message)
+      })
+  }
+})
 expressApp.get('/player_api.php', function (req, res) {
   if (!Object.prototype.hasOwnProperty.call(req.query, 'username') || !Object.prototype.hasOwnProperty.call(req.query, 'password')) {
     return res.status(400).send('Bad request')
@@ -1313,8 +1422,25 @@ expressApp.get('/xmltv.php', async function (req, res) {
   res.end()
 })
 // Play live stream
-expressApp.get(['/streaming/client_live.php', '/live/:username/:password/:streamId', '/live/:username/:password/:streamId.:extension', '/:username/:password/:streamId.:extension', '/:streamId.:extension', '/ch:streamId.m3u8', '/hls/:username/:password/:streamId/:token/:segment', '/hlsr/:username/:password/:streamId/:token/:segment'], function (req, res) {
-
+expressApp.get(['/streaming/client_live.php', '/live/:username/:password/:streamId.:extension', '/live/:username/:password/:streamId', '/:username/:password/:streamId.:extension', '/:streamId.:extension', '/ch:streamId.m3u8', '/hls/:username/:password/:streamId/:token/:segment', '/hlsr/:username/:password/:streamId/:token/:segment'], async function (req, res) {
+  // Verify username / password
+  if (!Object.prototype.hasOwnProperty.call(req.params, 'username') || !Object.prototype.hasOwnProperty.call(req.params, 'password')) {
+    return res.status(400).send('Bad request')
+  }
+  // Get playlist
+  const playlistLive = await db.PlaylistLive.findByPk(req.params.username)
+  if (playlistLive === null) {
+    return res.status(404).send('Playlist unavailable')
+  }
+  // Get provider stream
+  const providerLiveStream = await db.LiveStream.findByPk(req.params.streamId, {
+    include: [db.Provider]
+  })
+  if (providerLiveStream === null) {
+    return res.status(404).send('Stream unavailable')
+  }
+  // Redirect to provider
+  return res.redirect('http://' + providerLiveStream.Provider.host + ':' + providerLiveStream.Provider.port + '/live/' + providerLiveStream.Provider.username + '/' + providerLiveStream.Provider.password + '/' + providerLiveStream.streamId + (Object.prototype.hasOwnProperty.call(req.params, 'extension') ? '.' + req.params.extension : ''))
 })
 // Redirect to manager interface
 expressApp.get('/', function (req, res) {
