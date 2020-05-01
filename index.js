@@ -166,26 +166,6 @@ expressApp.put('/manager/api/epg/:epgId', async function (req, res) {
 })
 // Update EPG catalog
 expressApp.get('/manager/api/epg/:epgId/update', async function (req, res) {
-  const epg = await db.Epg.findByPk(req.params.epgId, {
-    include: [{
-      model: db.Provider
-    }]
-  })
-  /*
-  if (epg.Provider !== null) {
-    // epg.provider.updateEpg(epg.Provider)
-    await epgGrabber.grabber[grabberIndex].updateEpg()
-    return res.send('EPG updated for provider ' + epg.Provider.name)
-  } else {
-    for (const grabberIndex in epgGrabber.grabber) {
-      if (epgGrabber.grabber[grabberIndex].epgid === parseInt(req.params.epgId)) {
-        await epgGrabber.grabber[grabberIndex].updateEpg()
-        return res.status(200).send('EPG updated')
-      }
-    }
-    return res.status(404).send('EPG grabber not found')
-  }
-  */
   for (const grabberIndex in epgGrabber.grabber) {
     if (epgGrabber.grabber[grabberIndex].epgid === parseInt(req.params.epgId)) {
       await epgGrabber.grabber[grabberIndex].updateEpg()
