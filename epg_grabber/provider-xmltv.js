@@ -32,7 +32,7 @@ module.exports = class Grabber {
         providerId: provider.id
       })
     }
-    this.epgId = epg.id
+    this.epgid = epg.id
     const that = this
     console.log('[EPG provider ' + provider.name + '] initialized')
     // Verify archive file
@@ -72,7 +72,7 @@ module.exports = class Grabber {
     } else if (epg.status === false) {
       return false
     }
-    this.epgId = epg.id
+    this.epgid = epg.id
     console.log('[EPG provider ' + provider.name + '] updating...')
     // Download XMLTV from provider only if file older than 1 day
     let fileStat = {}
@@ -80,7 +80,7 @@ module.exports = class Grabber {
       fileStat = fs.statSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))
     }
     if (!fs.existsSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml')) || fileStat.ctime.getTime() < new Date().getTime() - 86400000) {
-      console.log('[EPG provider ' + provider.name + '] downloading http://' + provider.host + ':' + provider.port + '/xmltv.php?username=' + provider.username + '&password=' + provider.password)
+      console.log('[EPG provider ' + provider.name + '] downloading http://' + provider.host + ':' + provider.port + '/xmltv.php?username=' + provider.username + '&password=' + provider.password + '&prev_days=' + 15 + '&next_days=1')
       const response = await fetch('http://' + provider.host + ':' + provider.port + '/xmltv.php?username=' + provider.username + '&password=' + provider.password)
       const fileStream = fs.createWriteStream(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))
       await new Promise(function (resolve, reject) {
@@ -108,10 +108,10 @@ module.exports = class Grabber {
       // Search programme
       let epgTags = []
       try {
-        epgTags = await that.db.sequelize.query('SELECT id FROM epgTag WHERE epgId = :epgId AND channel = :channel AND start = :startDate', {
+        epgTags = await that.db.sequelize.query('SELECT id FROM epgTag WHERE epgId = :epgid AND channel = :channel AND start = :startDate', {
           type: that.db.sequelize.QueryTypes.SELECT,
           replacements: {
-            epgId: that.epgId,
+            epgid: that.epgid,
             channel: programme.channel.toLowerCase(),
             startDate: momentTz(programme.start).utcOffset('+00:00').format('YYYY-MM-DD HH:mm:ss.SSS Z')
           }
@@ -123,7 +123,7 @@ module.exports = class Grabber {
       if (epgTags.length === 0) {
         // console.log('Programme not found for channel ' + programme.channel.toLowerCase() + ' title ' + programme.title[0] + ', start ' + new Date(programme.start).toISOString())
         bulkCreate.push({
-          epgId: that.epgId,
+          epgid: that.epgid,
           channel: programme.channel.toLowerCase(),
           start: new Date(programme.start),
           stop: new Date(programme.end),
@@ -150,7 +150,7 @@ module.exports = class Grabber {
         lastScan: new Date()
       }, {
         where: {
-          id: that.epgId
+          id: that.epgid
         }
       })
       console.log('[EPG provider ' + provider.name + '] XMLTV parsing finished')
@@ -168,10 +168,10 @@ module.exports = class Grabber {
         if (liveStream !== null) {
           const stopDate = Math.round(new Date().getTime() / 1000) - (liveStream.archiveDuration * 86400)
           // Delete old entries
-          await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId = :epgId AND stop < :stopDate', {
+          await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId = :epgid AND stop < :stopDate', {
             type: that.db.sequelize.QueryTypes.SELECT,
             replacements: {
-              epgId: that.epgId,
+              epgid: that.epgid,
               stopDate: new Date(stopDate)
             }
           })

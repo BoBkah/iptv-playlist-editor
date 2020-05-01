@@ -697,6 +697,13 @@
                                 })
                             })
                         })
+                        $('.epgButtonUpdate').each(function() {
+                            $(this).on('click', function () {
+                                axios.get('/manager/api/epg/' + $(this).attr('epg-id') + '/update').then(function () {
+                                    epgUpdate()
+                                })
+                            })
+                        })
                     })
                 }
                 epgUpdate()

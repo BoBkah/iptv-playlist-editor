@@ -171,8 +171,10 @@ expressApp.get('/manager/api/epg/:epgId/update', async function (req, res) {
       model: db.Provider
     }]
   })
+  /*
   if (epg.Provider !== null) {
-    epg.provider.updateEpg(epg.Provider)
+    // epg.provider.updateEpg(epg.Provider)
+    await epgGrabber.grabber[grabberIndex].updateEpg()
     return res.send('EPG updated for provider ' + epg.Provider.name)
   } else {
     for (const grabberIndex in epgGrabber.grabber) {
@@ -183,6 +185,14 @@ expressApp.get('/manager/api/epg/:epgId/update', async function (req, res) {
     }
     return res.status(404).send('EPG grabber not found')
   }
+  */
+  for (const grabberIndex in epgGrabber.grabber) {
+    if (epgGrabber.grabber[grabberIndex].epgid === parseInt(req.params.epgId)) {
+      await epgGrabber.grabber[grabberIndex].updateEpg()
+      return res.status(200).send('EPG updated')
+    }
+  }
+  return res.status(404).send('EPG grabber not found')
 })
 // Delete EPG
 expressApp.delete('/manager/api/epg/:epgId', async function (req, res) {
@@ -1107,7 +1117,7 @@ expressApp.get('/get.php', function (req, res) {
         const name = streams[index].name === null ? streams[index].LiveStream.name : streams[index].name
         const logo = streams[index].icon === null ? streams[index].LiveStream.icon : streams[index].icon
         const epgId = streams[index].epgChannelId === null ? streams[index].LiveStream.epgChannelId === null ? '' : streams[index].LiveStream.epgChannelId : streams[index].epgChannelId
-        res.write('#EXTINF:-1 tvg-id="' + epgId + '" tvg-name="' + name.toLowerCase() + '" tvg-logo="' + logo + '" tvg-rec="' + streams[index].LiveStream.archiveDuration + '" timeshift="' + streams[index].LiveStream.archiveDuration + '" group-title="' + streams[index].PlaylistLiveCategory.name + '",' + name + '\n')
+        res.write('#EXTINF:-1 tvg-id="' + epgId.toLowerCase() + '" tvg-name="' + name.toLowerCase() + '" tvg-logo="' + logo + '" tvg-rec="' + streams[index].LiveStream.archiveDuration + '" timeshift="' + streams[index].LiveStream.archiveDuration + '" group-title="' + streams[index].PlaylistLiveCategory.name + '",' + name + '\n')
         // Stream url
         res.write('http://' + streams[index].LiveStream.Provider.host + ':' + streams[index].LiveStream.Provider.port + '/' + streams[index].LiveStream.Provider.username + '/' + streams[index].LiveStream.Provider.password + '/' + streams[index].LiveStream.streamId + '\n')
       }
@@ -1276,7 +1286,7 @@ expressApp.get('/player_api.php', function (req, res) {
             stream_type: 'live',
             stream_id: streams[index].liveStreamId,
             stream_icon: streams[index].icon === null ? streams[index].LiveStream.icon : streams[index].icon,
-            epg_channel_id: streams[index].epgChannelId === null ? streams[index].LiveStream.epgChannelId === null ? '' : streams[index].LiveStream.epgChannelId : streams[index].epgChannelId,
+            epg_channel_id: streams[index].epgChannelId === null ? streams[index].LiveStream.epgChannelId === null ? '' : streams[index].LiveStream.epgChannelId.toLowerCase() : streams[index].epgChannelId.toLowerCase(),
             added: String(Date.parse(streams[index].createdAt) / 1000),
             category_id: req.query.category_id,
             custom_sid: streams[index].LiveStream.serviceId,
@@ -1337,6 +1347,7 @@ expressApp.get('/player_api.php', function (req, res) {
       })
       break
     default:
+      /*
       db.Provider.findAll().then(function (providers) {
         if (providers === null) {
           return res.status(404).send('No provider available')
@@ -1345,12 +1356,58 @@ expressApp.get('/player_api.php', function (req, res) {
       }).catch(function (error) {
         res.status(500).send(error.message)
       })
-      break
+      */
+      return res.json({
+        user_info: {
+          username: req.query.username,
+          password: req.query.password,
+          message: '',
+          auth: 1,
+          status: 'Active',
+          exp_date: '1593590150',
+          is_trial: '0',
+          active_cons: '0',
+          created_at: '1593590150',
+          max_connections: '1',
+          allowed_output_formats: [
+            'ts'
+          ]
+        },
+        server_info: {
+          url: req.hostname,
+          port: req.headers.host.split(':').pop(),
+          https_port: '23455',
+          server_protocol: 'http',
+          timezone: 'Europe/Paris',
+          timestamp_now: parseInt(new Date().getTime() / 1000),
+          rtmp_port: '23344',
+          time_now: moment().format('YYYY-MM-DD HH:mm:ss'),
+          process: true
+        }
+      })
   }
 })
 // Timeshift
-expressApp.get(['/streaming/timeshift.php', '/timeshift/:username/:password/:duration/:start/:streamId.:extension', '/timeshifts/:username/:password/:duration/:start/:streamId.:extension'], function (req, res) {
-
+expressApp.get(['/streaming/timeshift.php', '/timeshift/:username/:password/:duration/:start/:stream.:extension', '/timeshifts/:username/:password/:duration/:start/:stream.:extension'], async function (req, res) {
+  // Init parameters
+  let params = {}
+  if (Object.keys(req.query).length > 0) {
+    params = req.query
+  } else if (Object.keys(req.params).length > 0) {
+    params = req.params
+  }
+  if (params.username === '' || params.password === '' || params.duration === '') {
+    return res.status(400).send('Bad request')
+  }
+  // Get provider stream
+  const providerLiveStream = await db.LiveStream.findByPk(params.stream, {
+    include: [db.Provider]
+  })
+  if (providerLiveStream === null) {
+    return res.status(404).send('Stream unavailable')
+  }
+  // Redirect to provider
+  return res.redirect('http://' + providerLiveStream.Provider.host + ':' + providerLiveStream.Provider.port + '/streaming/timeshift.php?username=' + providerLiveStream.Provider.username + '&password=' + providerLiveStream.Provider.password + '&stream=' + providerLiveStream.streamId + '&start=' + params.start + '&duration=' + params.duration)
 })
 // Play list stream
 expressApp.get('/:username/:password/:id', function (req, res) {
