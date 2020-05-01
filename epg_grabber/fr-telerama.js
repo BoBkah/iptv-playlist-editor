@@ -65,6 +65,34 @@ const channels = {
     name: 'beIN SPORTS 3',
     id: 'beinsports3.fr'
   },
+  1342: {
+    name: 'beIN SPORTS MAX 10',
+    id: 'beinsportmax10.fr'
+  },
+  1336: {
+    name: 'beIN SPORTS MAX 4',
+    id: 'beinsportmax4.fr'
+  },
+  1337: {
+    name: 'beIN SPORTS MAX 5',
+    id: 'beinsportmax5.fr'
+  },
+  1338: {
+    name: 'beIN SPORTS MAX 6',
+    id: 'beinsportmax6.fr'
+  },
+  1339: {
+    name: 'beIN SPORTS MAX 7',
+    id: 'beinsportmax7.fr'
+  },
+  1340: {
+    name: 'beIN SPORTS MAX 8',
+    id: 'beinsportmax8.fr'
+  },
+  1341: {
+    name: 'beIN SPORTS MAX 9',
+    id: 'beinsportmax9.fr'
+  },
   1960: {
     name: 'BET',
     id: 'bet.fr'
@@ -81,29 +109,78 @@ const channels = {
     name: 'Boing',
     id: 'boing.fr'
   },
+  321: {
+    name: 'Boomerang',
+    id: 'boomerang.fr'
+  },
   192: {
     name: 'TF1',
     id: 'tf1.fr'
-  }
-  /*
-  321: 'boomerang.fr',
-  445: 'c8.fr',
-  34: 'canalplus.fr',
-  534: 'canal32.fr',
-  33: 'canalpluscinema.fr',
-  30: 'canalplusdecale.fr',
-  657: 'canalplusfamily.fr',
-  32: 'canalj.fr',
-  1563: 'canalplusseries.fr',
-  35: 'canalplussport.fr',
-  24: 'canvas.be',
-  36: 'cartoonnetwork.fr',
-  38: 'chassepeche.fr',
-  1399: 'cherie25.fr',
-  287: 'cineplusclassic.fr',
-  285: 'cineplusclub.fr',
-  192: 'tf1.fr',
-  */
+  },
+  445: {
+    name: 'C8',
+    id: 'c8.fr'
+  },
+  34: {
+    name: 'Canal+',
+    id: 'canalplus.fr'
+  },
+  33: {
+    name: 'Canal+ Cinéma',
+    id: 'canalpluscinema.fr'
+  },
+  30: {
+    name: 'Canal+ Décalé',
+    id: 'canalplusdecale.fr'
+  },
+  657: {
+    name: 'Canal+ Family',
+    id: 'canalplusfamily.fr'
+  },
+  32: {
+    name: 'Canal J',
+    id: 'canalj.fr'
+  },
+  1563: {
+    name: 'Canal+ Séries',
+    id: 'canalplusseries.fr'
+  },
+  35: {
+    name: 'Canal+ Sport',
+    id: 'canalplussport.fr'
+  },
+  36: {
+    name: 'Cartoon Network',
+    id: 'cartoonnetwork.fr'
+  },
+  38: {
+    name: 'Chasse et pêche',
+    id: 'chassepeche.fr'
+  },
+  1399: {
+    name: 'Chérie 25',
+    id: 'cherie25.fr'
+  },
+  287: {
+    name: 'Ciné+ Classic',
+    id: 'cinecinemaclassic.fr'
+  },
+  285: {
+    name: 'Ciné+ Club',
+    id: 'cinecinemaclub.fr'
+  },
+  283: {
+    name: 'Ciné+ Emotion',
+    id: 'cinecinemaemotion.fr'
+  },
+  332: {
+    name: 'Ciné+ Famiz',
+    id: 'cinecinemafamiz.fr'
+  },
+  332: {
+    name: 'Ciné+ Famiz',
+    id: 'cinecinemafamiz.fr'
+  },
 }
 
 module.exports = class Grabber {
