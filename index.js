@@ -1311,19 +1311,13 @@ expressApp.get('/player_api.php', function (req, res) {
         return res.status(200).json({ epg_listings: [] })
       }
       // Redirect to provider url
-      db.PlaylistLiveStream.findOne({
-        where: {
-          id: req.query.stream_id
-        },
-        include: [{
-          model: db.LiveStream,
-          include: [db.Provider]
-        }]
+      db.LiveStream.findByPk(req.query.stream_id, {
+        include: [db.Provider]
       }).then(function (stream) {
         if (stream === null) {
           return res.status(200).json({ epg_listings: [] })
         }
-        return res.redirect('http://' + stream.LiveStream.Provider.host + ':' + stream.LiveStream.Provider.port + '/player_api.php?username=' + stream.LiveStream.Provider.username + '&password=' + stream.LiveStream.Provider.password + '&action=get_simple_data_table&stream_id=' + stream.LiveStream.streamId)
+        return res.redirect('http://' + stream.Provider.host + ':' + stream.Provider.port + '/player_api.php?username=' + stream.Provider.username + '&password=' + stream.Provider.password + '&action=get_simple_data_table&stream_id=' + stream.streamId)
       })
       break
     default:
