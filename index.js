@@ -132,6 +132,30 @@ expressApp.get('/manager/api/epg', function (req, res) {
     }
   })
 })
+// Search channel
+expressApp.get('/manager/api/epg/channel/:query', async function (req, res) {
+  const channels = await db.EpgTag.findAll({
+    where: {
+      channel: {
+        [db.Sequelize.Op.like]: '%' + req.params.query + '%'
+      }
+    },
+    attributes: [
+      'channel'
+    ],
+    group: [
+      'channel'
+    ],
+    order: [
+      'channel'
+    ]
+  })
+  const result = []
+  for (const channelIndex in channels) {
+    result.push(channels[channelIndex].channel)
+  }
+  res.json(result)
+})
 // Get EPG info
 expressApp.get('/manager/api/epg/:epgId', function (req, res) {
   db.Epg.findOne({
@@ -831,8 +855,14 @@ expressApp.get('/manager/api/playlist/live/:playlistLiveId/category/:playlistLiv
       const tmpStream = {}
       tmpStream.id = streams[streamIndex].id
       tmpStream.position = streams[streamIndex].position
+      tmpStream.originalName = streams[streamIndex].LiveStream.name
+      tmpStream.customName = streams[streamIndex].name
       tmpStream.name = streams[streamIndex].name !== null ? streams[streamIndex].name : streams[streamIndex].LiveStream.name
+      tmpStream.originalIcon = streams[streamIndex].LiveStream.icon
+      tmpStream.customIcon = streams[streamIndex].icon
       tmpStream.icon = streams[streamIndex].icon !== null ? streams[streamIndex].icon : streams[streamIndex].LiveStream.icon
+      tmpStream.originalEpgChannelId = streams[streamIndex].LiveStream.epgChannelId
+      tmpStream.customEpgChannelId = streams[streamIndex].epgChannelId
       tmpStream.epgChannelId = streams[streamIndex].epgChannelId !== null ? streams[streamIndex].epgChannelId : streams[streamIndex].LiveStream.epgChannelId
       tmpStream.streamId = streams[streamIndex].LiveStream.streamId
       tmpStream.archive = streams[streamIndex].LiveStream.archive

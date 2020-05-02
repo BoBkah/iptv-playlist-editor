@@ -115,6 +115,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.3/handlebars.min.js" integrity="sha256-/PJBs6QWvXijOFIX04kZpLb6ZtSQckdOIavLWKKOgXU=" crossorigin="anonymous"></script>
         <script src="https://SortableJS.github.io/Sortable/Sortable.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/xcash/bootstrap-autocomplete@v2.3.4/dist/latest/bootstrap-autocomplete.min.js"></script>
         <script>
             Handlebars.registerHelper('isSelected', function (optionValue, selectedValue) {
                 if (Array.isArray(selectedValue)) {
@@ -515,17 +516,27 @@
                         }
                     })
                 }
+                let playlistStreamStyle = ''
                 const playlistStreamUpdate = function () {
                     $('#playlistStreamPanel').hide()
                     axios.get('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream', {
                         responseType: 'json'
                     }).then(function (playlistStream) {
-                        let template = Handlebars.compile($('#playlistStream-template').html())
+                        let template = Handlebars.compile($('#playlistStream' + ((playlistStreamStyle !== '') ? '-' + playlistStreamStyle : '') + '-template').html())
                         let html = template({
                             stream: playlistStream.data
                         })
                         $('#playlistStreamPanel').html(html)
                         $('#playlistStreamPanel').show()
+                        $('#playlistStreamStyleToogle').click(function () {
+                            if (playlistStreamStyle === '') {
+                                playlistStreamStyle = 'inline'
+                            } else {
+                                playlistStreamStyle = ''
+                            }
+                            console.log(playlistStreamStyle)
+                            playlistStreamUpdate()
+                        })
                         if (playlistStream.data.length > 0) {
                             // Enable tooltips
                             $('[data-toggle="tooltip"]').tooltip()
@@ -594,6 +605,28 @@
                                     result.push(playlistStream.data[streamIndex].name.replace($('input[name=playlistStreamRenameSearch]').val(), $('input[name=playlistStreamRenameReplace]').val()))
                                 }
                                 $('textarea[name=playlistStreamRenameResult]').val(result.join('\n'))
+                            }
+                            if (playlistStreamStyle === 'inline') {
+                                $('#playlistStreamList input[name=epgid]').autoComplete({
+                                    events: {
+                                        search: function (query, callback, element) {
+                                            axios.get('/manager/api/epg/channel/' + query).then(function (result) {
+                                                callback(result.data)
+                                            })
+                                        }
+                                    }
+                                })
+                                $('#playlistStreamList input[name=epgid]').on('autocomplete.select', function (e) {
+                                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $(this).attr('stream-id'), { epgChannelId: $(this).val() }).then(function () {
+                                        
+                                    })
+                                })
+                                $('#playlistStreamList input[name=name').on('keyup', function (e) {
+                                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $(this).attr('stream-id'), { name: $(this).val() })
+                                })
+                                $('#playlistStreamList input[name=icon').on('keyup', function (e) {
+                                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $(this).attr('stream-id'), { icon: $(this).val() })
+                                })
                             }
                         }
                     })
@@ -925,11 +958,11 @@
         </script>
         <script id="playlistStream-template" type="text/x-handlebars-template">
             <div class="panel-heading">
-                <h5>Stream(s) for selected category <small><i class="fa fa-file-signature" id="playlistStreamRename" title="Massive rename"></i></small></h5>
+                <h5>Stream(s) for selected category <small><i class="fa fa-file-signature" id="playlistStreamRename" title="Massive rename"></i> <i class="fas fa-list" id="playlistStreamStyleToogle" title="Change view"></i></small></h5>
             </div>
             <div class="panel-body">
                 <div class="row" id="playlistStreamList">
-                    {{#each stream}}
+                {{#each stream}}
                     <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12" stream-id="{{id}}">
                         <div class="card">
                             <div class="card-header">
@@ -957,7 +990,37 @@
                             </div>
                         </div>
                     </div>
-                    {{/each}}
+                {{/each}}
+                </div>
+            </div>
+        </script>
+        <script id="playlistStream-inline-template" type="text/x-handlebars-template">
+            <div class="panel-heading">
+                <h5>Stream(s) for selected category <small><i class="fa fa-file-signature" id="playlistStreamRename" title="Massive rename"></i> <i class="fas fa-th" id="playlistStreamStyleToogle" title="Change view"></i></small></h5>
+            </div>
+            <div class="panel-body">
+                <div class="row" id="playlistStreamList">
+                {{#each stream}}
+                    <div class="col-12 mb-1" stream-id="{{id}}">
+                        <div>
+                            <i class="fa fa-arrows-alt mr-2"></i>{{providerStreamName}}{{#if archiveDuration }} <i class="fas fa-history" data-toggle="tooltip" data-html="true" title="Catchup duration {{archiveDuration}} days"></i>{{/if}}
+                            <span class="float-right">
+                                <small>{{provider}}</small> <i class="fa fa-trash playlistStreamDelete" title="Delete" id="playlistStreamDelete" stream-id="{{id}}"></i>
+                            </span>
+                        </div>
+                        <div class="row form-group">
+                            <div class="col-3">
+                                <input type="text" name="name" class="form-control form-control-sm" placeholder="Channel name" value="{{customName}}" stream-id="{{id}}">
+                            </div>
+                            <div class="col-2">
+                                <input type="text" name="epgid" class="form-control form-control-sm" placeholder="EPG ID" value="{{customEpgChannelId}}" stream-id="{{id}}">
+                            </div>
+                            <div class="col-7">
+                                <input type="text" name="icon" class="form-control form-control-sm" placeholder="Logo URL" value="{{customIcon}}" stream-id="{{id}}">
+                            </div>
+                        </div>
+                    </div>
+                {{/each}}
                 </div>
             </div>
         </script>
@@ -1129,6 +1192,7 @@
                         <label for="playlistStreamIcon">Icon url</label>
                         <input class="form-control" type="text" id="playlistStreamIcon" name="playlistStreamIcon" value="{{playlistStream.icon}}" placeholder="{{playlistStream.LiveStream.icon}}">
                         <small id="playlistStreamIconHelp" class="form-text text-muted">Original icon: <a href="{{playlistStream.LiveStream.icon}}" target="_blank">{{playlistStream.LiveStream.icon}}</a></small>
+                        {{#if playlistStream.icon}}<small id="playlistStreamIconHelp" class="form-text text-muted">Custom icon: <a href="{{playlistStream.icon}}" target="_blank">{{playlistStream.icon}}</a></small>{{/if}}
                     </div>
                 </form>
             </div>
