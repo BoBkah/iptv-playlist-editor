@@ -90,7 +90,7 @@
             <h5 class="my-0 mr-md-auto font-weight-normal ">IPTV playlist editor</h5>
             <nav class="my-2 my-md-0 mr-md-3 nav">
                 <a class="nav-link p-2 text-light" id="nav-playlist" href="#playlist">Playlist</a>
-                <a class="nav-link p-2 text-light" id="nav-epg" href="#epg">EPG</a>
+                <a class="nav-link p-2 text-light" id="nav-epg" href="#epg">{{{__ "EPG"}}}</a>
             </nav>
             <a class="nav-link p-2 text-light" href="https://github.com/BoBkah/iptv-playlist-editor" target="_blank"><i class="fab fa-github"></i></a>
         </div>
@@ -99,7 +99,7 @@
         <!-- Overlay spinner -->
         <div id="overlay">
             <div class="spinner-border" role="status">
-                <span class="sr-only">Loading...</span>
+                <span class="sr-only">{{{__ "Loading..."}}}</span>
             </div>
         </div>
         <!-- Modal -->
@@ -155,6 +155,7 @@
             })
             var getUrl = window.location;
             var baseUrl = getUrl .protocol + "//" + getUrl.host;
+            // Disable enter key
             $(document).keypress(function (e) {
                 if (e.which === 13) {
                     e.preventDefault()
@@ -634,6 +635,7 @@
                 const playlistAdd = function () {
                     let data = {
                         name: $('div.modal input[name=playlistName]').val(),
+                        password: $('div.modal input[name=playlistPassword]').val(),
                     }
                     let epgSelected = []
                     $('div.modal table input[type=checkbox]').each(function () {
@@ -654,6 +656,7 @@
                 const playlistSave = function () {
                     let data = {
                         name: $('div.modal input[name=playlistName]').val(),
+                        password: $('div.modal input[name=playlistPassword]').val(),
                     }
                     let epgSelected = []
                     $('div.modal table input[type=checkbox]').each(function () {
@@ -742,7 +745,6 @@
                 epgUpdate()
                 // Page
                 const changePage = function () {
-                    console.log(window.location.hash)
                     $('nav a').removeClass("active")
                     switch (window.location.hash) {
                         case '#epg':
@@ -823,15 +825,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{#each epg}}
-                    <tr {{#unless status}} class="table-dark" {{/unless}}>
-                        <td>{{name}}</td>
-                        <td>{{channels}}</td>
-                        <td>{{min}}</td>
-                        <td>{{max}}</td>
-                        <td>{{#if status}}<button type="button" class="btn btn-secondary btn-sm epgButtonDisable" epg-id="{{id}}">Disable</button>{{else}}<button type="button" class="btn btn-success btn-sm epgButtonEnable" epg-id="{{id}}">Enable</button>{{/if}} <button class="btn btn-sm btn-primary epgButtonUpdate" epg-id="{{id}}">Update</button></td>
+                    \{{#each epg}}
+                    <tr \{{#unless status}} class="table-dark" \{{/unless}}>
+                        <td>\{{name}}</td>
+                        <td>\{{channels}}</td>
+                        <td>\{{min}}</td>
+                        <td>\{{max}}</td>
+                        <td>\{{#if status}}<button type="button" class="btn btn-secondary btn-sm epgButtonDisable" epg-id="\{{id}}">Disable</button>\{{else}}<button type="button" class="btn btn-success btn-sm epgButtonEnable" epg-id="\{{id}}">Enable</button>\{{/if}} <button class="btn btn-sm btn-primary epgButtonUpdate" epg-id="\{{id}}">Update</button></td>
                     </tr>
-                    {{/each}}
+                    \{{/each}}
                 </tbody>
               </table>
         </script>
@@ -839,17 +841,17 @@
         <script id="providerList-template" type="text/x-handlebars-template">
             <h5>Provider <small><i class="fa fa-plus-square" id="providerAdd" title="Add provider"></i> <i class="fa fa-sync" id="providerSync" title="Update provider's categories/streams"></i> <i class="fa fa-pencil-alt" id="providerEdit" title="Edit provider"></i> <i class="fa fa-trash" id="providerDelete" title="Delete provider"></i></small></h5>
             <select id="providerList" class="form-control">
-                {{#each provider}}
-                <option value="{{id}}" {{{isSelected id ../providerSelected}}}>{{this.name}}</option>
-                {{/each}}
+                \{{#each provider}}
+                <option value="\{{id}}" \{{{isSelected id ../providerSelected}}}>\{{this.name}}</option>
+                \{{/each}}
             </select>
         </script>
         <script id="providerCategory-template" type="text/x-handlebars-template">
             <label for="providerCategory"><h6>Category</h6></label>
             <select id="providerCategory" class="form-control">
-                {{#each category}}
-                <option value="{{id}}">{{name}}</option>
-                {{/each}}
+                \{{#each category}}
+                <option value="\{{id}}">\{{name}}</option>
+                \{{/each}}
             </select>
         </script>
         <script id="providerStream-template" type="text/x-handlebars-template">
@@ -863,16 +865,16 @@
                     <p><button class="btn btn-success" id="copyLiveStreamToPlaylistCategory">Copy all streams</button></p>
                     <div class="row">
                         <div class="col">
-                            {{#each stream}}
-                    <div class="list-group-item justify-content-between align-items-center" stream-id="{{id}}">
-                        <span id="name">{{name}}</span>
-                        {{#if archiveDuration}}
+                            \{{#each stream}}
+                    <div class="list-group-item justify-content-between align-items-center" stream-id="\{{id}}">
+                        <span id="name">\{{name}}</span>
+                        \{{#if archiveDuration}}
                         <span class="float-right">
-                            <small><i class="fas fa-history" title="Catchup duration {{archiveDuration}} days"></i> {{archiveDuration}} days</small>
+                            <small><i class="fas fa-history" title="Catchup duration \{{archiveDuration}} days"></i> \{{archiveDuration}} days</small>
                         </span>
-                        {{/if}}
+                        \{{/if}}
                     </div>
-                    {{/each}}
+                    \{{/each}}
                         </div>
                     </div>
                     
@@ -909,7 +911,7 @@
         </script>
         <script id="providerModalEdit-template" type="text/x-handlebars-template">
             <div class="modal-header">
-                <h5 class="modal-title">Edit provider {{provider.name}}</h5>
+                <h5 class="modal-title">Edit provider \{{provider.name}}</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
                 </button>
@@ -918,15 +920,15 @@
                 <form>
                     <div class="form-group">
                         <label for="providerName">Name</label>
-                        <input class="form-control" type="text" name="providerName" value="{{provider.name}}">
+                        <input class="form-control" type="text" name="providerName" value="\{{provider.name}}">
                         <label for="providerHost">Host</label>
-                        <input class="form-control" type="text" name="providerHost" placeholder="Without scheme, only domain or IP" value="{{provider.host}}">
+                        <input class="form-control" type="text" name="providerHost" placeholder="Without scheme, only domain or IP" value="\{{provider.host}}">
                         <label for="providerPort">Port</label>
-                        <input class="form-control" type="text" name="providerPort" value="{{provider.port}}">
+                        <input class="form-control" type="text" name="providerPort" value="\{{provider.port}}">
                         <label for="providerUsername">Username</label>
-                        <input class="form-control" type="text" name="providerUsername" value="{{provider.username}}">
+                        <input class="form-control" type="text" name="providerUsername" value="\{{provider.username}}">
                         <label for="providerPassword">Password</label>
-                        <input class="form-control" type="text" name="providerPassword" value="{{provider.password}}">
+                        <input class="form-control" type="text" name="providerPassword" value="\{{provider.password}}">
                     </div>
                 </form>
             </div>
@@ -939,9 +941,9 @@
         <script id="playlistList-template" type="text/x-handlebars-template">
             <h5>Playlist <small><i class="fa fa-plus-square" id="playlistAdd" title="Add playlist"></i> <i class="fa fa-pencil-alt" id="playlistEdit" title="Edit playlist"></i> <i class="fa fa-trash" id="playlistDelete" title="Delete playlist"></i> <i class="fa fa-info" id="playlistInfo" title="Display playlist informations"></i></small></h5>
             <select id="playlistList" class="form-control">
-                {{#each playlist}}
-                <option value="{{id}}" {{{isSelected id ../playlistSelected}}}>{{name}}</option>
-                {{/each}}
+                \{{#each playlist}}
+                <option value="\{{id}}" \{{{isSelected id ../playlistSelected}}}>\{{name}}</option>
+                \{{/each}}
             </select>
         </script>
         <script id="playlistCategory-template" type="text/x-handlebars-template">
@@ -950,9 +952,9 @@
             </div>
             <div class="panel-body">
                 <div class="list-group" id="playlistCategoryList">
-                    {{#each category}}
-                    <div class="list-group-item {{#if active}}active{{/if}}" category-id="{{id}}"><span class="fas fa-arrows-alt" aria-hidden="true"></span> {{name}}</div>
-                    {{/each}}
+                    \{{#each category}}
+                    <div class="list-group-item \{{#if active}}active\{{/if}}" category-id="\{{id}}"><span class="fas fa-arrows-alt" aria-hidden="true"></span> \{{name}}</div>
+                    \{{/each}}
                 </div>
             </div>
         </script>
@@ -962,8 +964,8 @@
             </div>
             <div class="panel-body">
                 <div class="row" id="playlistStreamList">
-                {{#each stream}}
-                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12" stream-id="{{id}}">
+                \{{#each stream}}
+                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6 col-12" stream-id="\{{id}}">
                         <div class="card">
                             <div class="card-header">
                                 <div class="row">
@@ -971,26 +973,26 @@
                                         <i class="fa fa-arrows-alt"></i>
                                     </div>
                                     <div class="col-sm-6 text-right">
-                                        <span class="badge badge-pill badge-primary">{{position}}</span>
+                                        <span class="badge badge-pill badge-primary">\{{position}}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div class="card-body" style="background-image: url('{{icon}}');">
-                                <div class="card-title text-center align-middle">{{name}}{{#if archiveDuration }}<br /><i class="fas fa-history" data-toggle="tooltip" data-html="true" title="Catchup duration {{archiveDuration}} days"></i>{{/if}}</div>
+                            <div class="card-body" style="background-image: url('\{{icon}}');">
+                                <div class="card-title text-center align-middle">\{{name}}\{{#if archiveDuration }}<br /><i class="fas fa-history" data-toggle="tooltip" data-html="true" title="Catchup duration \{{archiveDuration}} days"></i>\{{/if}}</div>
                             </div>
                             <div class="card-footer">
                                 <div class="row">
                                     <div class="col-sm-6">
-                                        <small>{{provider}}</small>
+                                        <small>\{{provider}}</small>
                                     </div>
                                     <div class="col-sm-6 text-right">
-                                        <small><i class="fa fa-pencil-alt playlistStreamEdit" title="Edit" id="playlistStreamEdit" stream-id="{{id}}"></i> <i class="fas fa-info" data-toggle="tooltip" data-html="true" title="<p>Stream ID: {{streamId}}<br>Stream name: {{providerStreamName}}<br>Category: {{providerCategory}}</p>" stream-id="{{id}}"></i> <i class="fa fa-trash playlistStreamDelete" title="Delete" id="playlistStreamDelete" stream-id="{{id}}"></i></small>
+                                        <small><i class="fa fa-pencil-alt playlistStreamEdit" title="Edit" id="playlistStreamEdit" stream-id="\{{id}}"></i> <i class="fas fa-info" data-toggle="tooltip" data-html="true" title="<p>Stream ID: \{{streamId}}<br>Stream name: \{{providerStreamName}}<br>Category: \{{providerCategory}}</p>" stream-id="\{{id}}"></i> <i class="fa fa-trash playlistStreamDelete" title="Delete" id="playlistStreamDelete" stream-id="\{{id}}"></i></small>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                {{/each}}
+                \{{/each}}
                 </div>
             </div>
         </script>
@@ -1000,27 +1002,27 @@
             </div>
             <div class="panel-body">
                 <div class="row" id="playlistStreamList">
-                {{#each stream}}
-                    <div class="col-12 mb-1" stream-id="{{id}}">
+                \{{#each stream}}
+                    <div class="col-12 mb-1" stream-id="\{{id}}">
                         <div>
-                            <i class="fa fa-arrows-alt mr-2"></i>{{providerStreamName}}{{#if archiveDuration }} <i class="fas fa-history" data-toggle="tooltip" data-html="true" title="Catchup duration {{archiveDuration}} days"></i>{{/if}}
+                            <i class="fa fa-arrows-alt mr-2"></i>\{{providerStreamName}}\{{#if archiveDuration }} <i class="fas fa-history" data-toggle="tooltip" data-html="true" title="Catchup duration \{{archiveDuration}} days"></i>\{{/if}}
                             <span class="float-right">
-                                <small>{{provider}}</small> <i class="fa fa-trash playlistStreamDelete" title="Delete" id="playlistStreamDelete" stream-id="{{id}}"></i>
+                                <small>\{{provider}}</small> <i class="fa fa-trash playlistStreamDelete" title="Delete" id="playlistStreamDelete" stream-id="\{{id}}"></i>
                             </span>
                         </div>
                         <div class="row form-group">
                             <div class="col-3">
-                                <input type="text" name="name" class="form-control form-control-sm" placeholder="Channel name" value="{{customName}}" stream-id="{{id}}">
+                                <input type="text" name="name" class="form-control form-control-sm" placeholder="Channel name" value="\{{customName}}" stream-id="\{{id}}">
                             </div>
                             <div class="col-2">
-                                <input type="text" name="epgid" class="form-control form-control-sm" placeholder="EPG ID" value="{{customEpgChannelId}}" stream-id="{{id}}">
+                                <input type="text" name="epgid" class="form-control form-control-sm" placeholder="EPG ID" value="\{{customEpgChannelId}}" stream-id="\{{id}}">
                             </div>
                             <div class="col-7">
-                                <input type="text" name="icon" class="form-control form-control-sm" placeholder="Logo URL" value="{{customIcon}}" stream-id="{{id}}">
+                                <input type="text" name="icon" class="form-control form-control-sm" placeholder="Logo URL" value="\{{customIcon}}" stream-id="\{{id}}">
                             </div>
                         </div>
                     </div>
-                {{/each}}
+                \{{/each}}
                 </div>
             </div>
         </script>
@@ -1036,25 +1038,35 @@
                     <div class="form-group">
                         <label for="playlistName">Name</label>
                         <input class="form-control" type="text" name="playlistName">
+                        <label for="playlistPassword">Password</label>
+                        <div class="input-group mb-2">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text"><i class="fas fa-key" onclick="$('div.modal input[name=playlistPassword]').val(Math.random().toString(36).slice(-10))" title="Generate password"></i></div>
+                            </div>
+                            <input class="form-control" type="text" name="playlistPassword" value="\{{playlist.password}}">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="playlistEpgProvider">EPG</label>
                         <table class="table table-sm">
                             <thead>
                               <tr>
-                                <th scope="col">#</th>
                                 <th scope="col">EPG name</th>
                                 <th scope="col">Priority weight</th>
                               </tr>
                             </thead>
                             <tbody>
-                        {{#each epg}}
+                        \{{#each epg}}
                                 <tr>
-                                    <td class="align-middle"><input class="" type="checkbox" value="{{id}}" name="epg[]" id="check{{this.name}}"></td>
-                                    <td class="align-middle"><label class="" for="check{{this.name}}">{{this.name}}</label></td>
-                                    <td class="align-middle"><input type="text" id="priority{{this.id}}" size="2" value="0"></td>
+                                    <td class="align-middle">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="\{{id}}" name="epg[]" id="check\{{this.name}}">
+                                            <label class="form-check-label" for="check\{{this.name}}">\{{this.name}}</label>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle"><input class="form-control form-control-sm" type="text" id="priority\{{this.id}}" size="2" value="0"></td>
                                 </tr>
-                        {{/each}}
+                        \{{/each}}
                             </tbody>
                         </table>
                         <small>Used to generate XLMTV EPG for your playlists streams</small>
@@ -1068,7 +1080,7 @@
         </script>
         <script id="playlistModalEdit-template" type="text/x-handlebars-template">
             <div class="modal-header">
-                <h5 class="modal-title">Edit playlist {{playlist.name}}</h5>
+                <h5 class="modal-title">Edit playlist \{{playlist.name}}</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
                 </button>
@@ -1077,26 +1089,36 @@
                 <form>
                     <div class="form-group">
                         <label for="playlistName">Name</label>
-                        <input class="form-control" type="text" name="playlistName" value="{{playlist.name}}">
+                        <input class="form-control" type="text" name="playlistName" value="\{{playlist.name}}">
+                        <label for="playlistPassword">Password</label>
+                        <div class="input-group mb-2">
+                            <div class="input-group-prepend">
+                                <div class="input-group-text"><i class="fas fa-key" onclick="$('div.modal input[name=playlistPassword]').val(Math.random().toString(36).slice(-10))" title="Generate password"></i></div>
+                            </div>
+                            <input class="form-control" type="text" name="playlistPassword" value="\{{playlist.password}}">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="playlistEpgProvider">EPG</label>
                         <table class="table table-sm">
                             <thead>
                               <tr>
-                                <th scope="col">#</th>
                                 <th scope="col">EPG name</th>
                                 <th scope="col">Priority weight</th>
                               </tr>
                             </thead>
                             <tbody>
-                        {{#each epg}}
+                        \{{#each epg}}
                                 <tr>
-                                    <td class="align-middle"><input class="" type="checkbox" value="{{id}}" name="epg[]" id="check{{this.name}}" {{{isChecked id ../playlist.Epgs}}}></td>
-                                    <td class="align-middle"><label class="" for="check{{this.name}}">{{this.name}}</label></td>
-                                    <td class="align-middle"><input type="text" id="priority{{this.id}}" size="2" value="{{{getPriority id ../playlist.Epgs}}}"></td>
+                                    <td class="align-middle">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="\{{id}}" name="epg[]" id="check\{{this.name}}" \{{{isChecked id ../playlist.Epgs}}}>
+                                            <label class="form-check-label" for="check\{{this.name}}">\{{this.name}}</label>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle"><input class="form-control form-control-sm" type="text" id="priority\{{this.id}}" size="2" value="\{{{getPriority id ../playlist.Epgs}}}"></td>
                                 </tr>
-                        {{/each}}
+                        \{{/each}}
                             </tbody>
                         </table>
                         <small>Used to generate XLMTV EPG for your playlists streams</small>
@@ -1110,18 +1132,18 @@
         </script>
         <script id="playlistModalInfos-template" type="text/x-handlebars-template">
             <div class="modal-header">
-                <h5 class="modal-title">Playlist {{playlist.name}} informations</h5>
+                <h5 class="modal-title">Playlist \{{playlist.name}} informations</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <h5>API Xtream Codes access :</h5>
-                <p>Host: {{baseUrl}}<br />Username: {{playlist.id}}<br />Password: x</p>
+                <p>Host: \{{baseUrl}}<br />Username: \{{playlist.id}}<br />Password: \{{playlist.password}}</p>
                 <h5>EPG URL:</h5>
-                <p><a href="{{baseUrl}}/xmltv.php?username={{playlist.id}}&password=x" target="_blank">{{baseUrl}}/xmltv.php?username={{playlist.id}}&password=x</a></p>
+                <p><a href="\{{baseUrl}}/xmltv.php?username=\{{playlist.id}}&password=\{{playlist.password}}" target="_blank">\{{baseUrl}}/xmltv.php?username=\{{playlist.id}}&password=\{{playlist.password}}</a></p>
                 <h5>Download M3U playlist</h5>
-                <p><a href="{{baseUrl}}/get.php?username={{playlist.id}}&password=x">{{baseUrl}}/get.php?username={{playlist.id}}&password=x</a></p>
+                <p><a href="\{{baseUrl}}/get.php?username=\{{playlist.id}}&password=\{{playlist.password}}">\{{baseUrl}}/get.php?username=\{{playlist.id}}&password=\{{playlist.password}}</a></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -1149,7 +1171,7 @@
         </script>
         <script id="playlistCategoryModalEdit-template" type="text/x-handlebars-template">
             <div class="modal-header">
-                <h5 class="modal-title">Edit playlist category {{playlistCategory.name}}</h5>
+                <h5 class="modal-title">Edit playlist category \{{playlistCategory.name}}</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
                 </button>
@@ -1158,7 +1180,7 @@
                 <form>
                     <div class="form-group">
                         <label for="playlistCategoryName">Name</label>
-                        <input class="form-control" type="text" name="playlistCategoryName" value="{{playlistCategory.name}}">
+                        <input class="form-control" type="text" name="playlistCategoryName" value="\{{playlistCategory.name}}">
                     </div>
                 </form>
             </div>
@@ -1176,23 +1198,23 @@
             </div>
             <div class="modal-body">
                 <form>
-                    <input type="hidden" name="id" value="{{playlistStream.id}}">
-                    <p>Provider: {{playlistStream.LiveStream.Provider.name}}</p>
+                    <input type="hidden" name="id" value="\{{playlistStream.id}}">
+                    <p>Provider: \{{playlistStream.LiveStream.Provider.name}}</p>
                     <div class="form-group">
                         <label for="playlistStreamName">Name</label>
-                        <input class="form-control" type="text" id="playlistStreamName" name="playlistStreamName" value="{{playlistStream.name}}" placeholder="{{playlistStream.LiveStream.name}}">
-                        <small id="playlistStreamNameHelp" class="form-text text-muted">Original name: {{playlistStream.LiveStream.name}}</small>
+                        <input class="form-control" type="text" id="playlistStreamName" name="playlistStreamName" value="\{{playlistStream.name}}" placeholder="\{{playlistStream.LiveStream.name}}">
+                        <small id="playlistStreamNameHelp" class="form-text text-muted">Original name: \{{playlistStream.LiveStream.name}}</small>
                     </div>
                     <div class="form-group">
                         <label for="playlistStreamEpgId">EPG id</label>
-                        <input class="form-control" type="text" id="playlistStreamEpgId" name="playlistStreamEpgId" value="{{playlistStream.epgChannelId}}" placeholder="{{playlistStream.LiveStream.epgChannelId}}">
-                        <small id="playlistStreamEpgIdHelp" class="form-text text-muted">Original EPG ID: {{playlistStream.LiveStream.epgChannelId}}</small>
+                        <input class="form-control" type="text" id="playlistStreamEpgId" name="playlistStreamEpgId" value="\{{playlistStream.epgChannelId}}" placeholder="\{{playlistStream.LiveStream.epgChannelId}}">
+                        <small id="playlistStreamEpgIdHelp" class="form-text text-muted">Original EPG ID: \{{playlistStream.LiveStream.epgChannelId}}</small>
                     </div>
                     <div class="form-group">
                         <label for="playlistStreamIcon">Icon url</label>
-                        <input class="form-control" type="text" id="playlistStreamIcon" name="playlistStreamIcon" value="{{playlistStream.icon}}" placeholder="{{playlistStream.LiveStream.icon}}">
-                        <small id="playlistStreamIconHelp" class="form-text text-muted">Original icon: <a href="{{playlistStream.LiveStream.icon}}" target="_blank">{{playlistStream.LiveStream.icon}}</a></small>
-                        {{#if playlistStream.icon}}<small id="playlistStreamIconHelp" class="form-text text-muted">Custom icon: <a href="{{playlistStream.icon}}" target="_blank">{{playlistStream.icon}}</a></small>{{/if}}
+                        <input class="form-control" type="text" id="playlistStreamIcon" name="playlistStreamIcon" value="\{{playlistStream.icon}}" placeholder="\{{playlistStream.LiveStream.icon}}">
+                        <small id="playlistStreamIconHelp" class="form-text text-muted">Original icon: <a href="\{{playlistStream.LiveStream.icon}}" target="_blank">\{{playlistStream.LiveStream.icon}}</a></small>
+                        \{{#if playlistStream.icon}}<small id="playlistStreamIconHelp" class="form-text text-muted">Custom icon: <a href="\{{playlistStream.icon}}" target="_blank">\{{playlistStream.icon}}</a></small>\{{/if}}
                     </div>
                 </form>
             </div>

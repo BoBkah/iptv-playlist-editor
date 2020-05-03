@@ -1,7 +1,8 @@
 'use strict'
 module.exports = (sequelize, DataTypes) => {
   const PlaylistLive = sequelize.define('PlaylistLive', {
-    name: DataTypes.STRING
+    name: DataTypes.STRING,
+    password: DataTypes.STRING
   }, {
     freezeTableName: true
   })

@@ -40,13 +40,14 @@ const xmlescape = require('xml-escape')
 const db = require('./models')
 const epgGrabber = require('./epg_grabber')
 const env = process.env.NODE_ENV || 'development'
+const i18n = require('i18n')
+const hbs = require('hbs')
 
 moment.suppressDeprecationWarnings = true
 
 // Load config
 const configData = fs.readFileSync(path.join(process.cwd(), 'config/config.json'))
 const config = JSON.parse(configData)[env]
-
 // Email transporter
 const mailTransporter = nodemailer.createTransport({
   host: config.email.host,
@@ -60,20 +61,33 @@ const mailTransporter = nodemailer.createTransport({
     rejectUnauthorized: false
   }
 })
-
 // Migrate database
 db.migrate().then(function () {
   epgGrabber.init(db)
 })
-
-// Express server
+// i18n configuration
+i18n.configure({
+  locales: ['en', 'fr'],
+  cookie: 'locales',
+  directory: path.join(__dirname, '/locales')
+})
+// Express server init
 const expressApp = express()
 expressApp.use(compression())
-// expressApp.use(express.json())
 expressApp.use(express.static(path.join(__dirname, '/views')))
-expressApp.set('view engine', 'pug')
+expressApp.set('views', path.join(__dirname, '/views'))
+expressApp.set('view engine', 'hbs')
+expressApp.engine('hbs', hbs.__express)
+expressApp.use(i18n.init)
 expressApp.use(bodyParser.json())
 expressApp.use(bodyParser.urlencoded({ extended: true }))
+// Handlebars init
+hbs.registerHelper('__', function () {
+  return i18n.__.apply(this, arguments)
+})
+hbs.registerHelper('__n', function () {
+  return i18n.__n.apply(this, arguments)
+})
 // Logs
 expressApp.use(function (req, res, next) {
   console.log('[API] ' + req.connection.remoteAddress + ' "' + req.method + ' ' + req._parsedUrl.path + '"')
@@ -81,9 +95,12 @@ expressApp.use(function (req, res, next) {
 })
 // Manager interface
 expressApp.get('/manager', function (req, res) {
+  res.render('index')
+  /*
   res.sendFile('./views/index.html', {
     root: __dirname
   })
+  */
 })
 /**
  * EPG
@@ -628,6 +645,9 @@ expressApp.put('/manager/api/playlist/live/:playlistLiveId', async function (req
   if (Object.prototype.hasOwnProperty.call(body, 'name')) {
     data.name = body.name
   }
+  if (Object.prototype.hasOwnProperty.call(body, 'password')) {
+    data.password = body.password
+  }
   // Update
   db.PlaylistLive.update(data, { where: { id: req.params.playlistLiveId } }).then(async function () {
     // EPG
@@ -1089,9 +1109,12 @@ expressApp.delete('/manager/api/playlist/live/:playlistLiveId/category/:playlist
  * ----------------------------------------------------------------------------
  */
 // Download M3U
-expressApp.get('/get.php', function (req, res) {
+expressApp.get('/get.php', async function (req, res) {
   if (!Object.prototype.hasOwnProperty.call(req.query, 'username') || !Object.prototype.hasOwnProperty.call(req.query, 'password')) {
     return res.status(400).send('Bad request')
+  }
+  if (!await grantAccess(req.query.username, req.query.password)) {
+    return res.status(401).send('Wrong username/password')
   }
   // Get playlist infos
   db.PlaylistLiveStream.findAll({
@@ -1138,9 +1161,12 @@ expressApp.get('/get.php', function (req, res) {
   })
 })
 // Xtream API
-expressApp.post('/panel_api.php', function (req, res) {
+expressApp.post('/panel_api.php', async function (req, res) {
   if (!Object.prototype.hasOwnProperty.call(req.body, 'username') || !Object.prototype.hasOwnProperty.call(req.body, 'password')) {
     return res.status(400).send('Bad request')
+  }
+  if (!await grantAccess(req.body.username, req.body.password)) {
+    return res.status(401).send('Wrong username/password')
   }
   const action = Object.prototype.hasOwnProperty.call(req.params, 'action') ? req.params.action : ''
   switch (action) {
@@ -1244,9 +1270,12 @@ expressApp.post('/panel_api.php', function (req, res) {
       })
   }
 })
-expressApp.get('/player_api.php', function (req, res) {
+expressApp.get('/player_api.php', async function (req, res) {
   if (!Object.prototype.hasOwnProperty.call(req.query, 'username') || !Object.prototype.hasOwnProperty.call(req.query, 'password')) {
     return res.status(400).send('Bad request')
+  }
+  if (!await grantAccess(req.query.username, req.query.password)) {
+    return res.status(401).send('Wrong username/password')
   }
   let whereQuery = {}
   switch (req.query.action) {
@@ -1403,6 +1432,9 @@ expressApp.get(['/streaming/timeshift.php', '/timeshift/:username/:password/:dur
   if (params.username === '' || params.password === '' || params.duration === '') {
     return res.status(400).send('Bad request')
   }
+  if (!await grantAccess(params.username, params.password)) {
+    return res.status(401).send('Wrong username/password')
+  }
   // Get provider stream
   const providerLiveStream = await db.LiveStream.findByPk(params.stream, {
     include: [db.Provider]
@@ -1421,6 +1453,9 @@ expressApp.get('/:username/:password/:id', function (req, res) {
 expressApp.get('/xmltv.php', async function (req, res) {
   if (!Object.prototype.hasOwnProperty.call(req.query, 'username') || !Object.prototype.hasOwnProperty.call(req.query, 'password')) {
     return res.status(400).send('Bad request')
+  }
+  if (!await grantAccess(req.query.username, req.query.password)) {
+    return res.status(401).send('Wrong username/password')
   }
   // Get playlist infos
   const playlist = await db.PlaylistLive.findOne({
@@ -1488,10 +1523,8 @@ expressApp.get(['/streaming/client_live.php', '/live/:username/:password/:stream
   if (!Object.prototype.hasOwnProperty.call(req.params, 'username') || !Object.prototype.hasOwnProperty.call(req.params, 'password')) {
     return res.status(400).send('Bad request')
   }
-  // Get playlist
-  const playlistLive = await db.PlaylistLive.findByPk(req.params.username)
-  if (playlistLive === null) {
-    return res.status(404).send('Playlist unavailable')
+  if (!await grantAccess(req.params.username, req.params.password)) {
+    return res.status(401).send('Wrong username/password')
   }
   // Get provider stream
   const providerLiveStream = await db.LiveStream.findByPk(req.params.streamId, {
@@ -1525,6 +1558,21 @@ expressApp.listen(process.env.LISTEN || 3000, async function () {
     open('http://' + localIp + ':' + (process.env.LISTEN || 3000))
   }
 })
+
+// Verify username/password
+const grantAccess = async function (username, password) {
+  if (username === '') {
+    return false
+  }
+  const playlistLive = await db.PlaylistLive.findByPk(username)
+  if (playlistLive === null) {
+    return false
+  }
+  if (playlistLive.password !== password) {
+    return false
+  }
+  return true
+}
 
 // Request HTTP
 const requestProvider = function (provider, parameters) {
