@@ -3,6 +3,7 @@
 const crypto = require('crypto')
 const fetch = require('node-fetch')
 const querystring = require('querystring')
+const moment = require('moment')
 
 const channels = {
   2: {
@@ -177,10 +178,174 @@ const channels = {
     name: 'Ciné+ Famiz',
     id: 'cinecinemafamiz.fr'
   },
-  332: {
-    name: 'Ciné+ Famiz',
-    id: 'cinecinemafamiz.fr'
+  284: {
+    name: 'Ciné+ Frisson',
+    id: 'cinecinemafrisson.fr'
   },
+  282: {
+    name: 'Ciné+ Premier',
+    id: 'cinecinemapremier.fr'
+  },
+  226: {
+    name: 'CNEWS',
+    id: 'cnews.fr'
+  },
+  53: {
+    name: 'CNN',
+    id: 'cnn.nws'
+  },
+  54: {
+    name: 'Comédie+',
+    id: 'comedie.fr'
+  },
+  2037: {
+    name: 'Crime District',
+    id: 'crimedistrict.fr'
+  },
+  458: {
+    name: 'CSTAR',
+    id: 'cstar.fr'
+  },
+  57: {
+    name: 'Demain TV',
+    id: 'demaintv.fr'
+  },
+  400: {
+    name: 'Discovery Channel',
+    id: 'discovery.fr'
+  },
+  1374: {
+    name: 'Discovery Science',
+    id: 'discoveryscience.fr'
+  },
+  58: {
+    name: 'Disney Channel',
+    id: 'disneychannel.fr'
+  },
+  299: {
+    name: 'Disney Channel +1',
+    id: 'disneychannelplus1.fr'
+  },
+  652: {
+    name: 'Disney Cinema',
+    id: 'disneycinema.fr'
+  },
+  300: {
+    name: 'Disney Junior',
+    id: '.fr'
+  },
+  79: {
+    name: 'Disney XD',
+    id: '.fr'
+  },
+  92: {
+    name: 'Dorcel TV',
+    id: '.fr'
+  },
+  405: {
+    name: 'E !',
+    id: '.fr'
+  },
+  403: {
+    name: 'ElleGirl',
+    id: '.fr'
+  },
+  64: {
+    name: 'Equidia',
+    id: '.fr'
+  },
+  1146: {
+    name: 'Equidia Life',
+    id: '.fr'
+  },
+  140: {
+    name: 'Euronews',
+    id: '.fr'
+  },
+  76: {
+    name: 'Eurosport 1',
+    id: '.fr'
+  },
+  439: {
+    name: 'Eurospot 2',
+    id: '.fr'
+  },
+  253: {
+    name: 'Extreme Sports Channel',
+    id: '.fr'
+  },
+  1996: {
+    name: 'Fashion TV',
+    id: '.fr'
+  },
+  100: {
+    name: 'Foot+ 24/24',
+    id: '.fr'
+  },
+  4: {
+    name: 'France 2',
+    id: '.fr'
+  },
+  529: {
+    name: 'France 24',
+    id: '.fr'
+  },
+  80: {
+    name: 'France 3',
+    id: '.fr'
+  },
+  78: {
+    name: 'France 4',
+    id: '.fr'
+  },
+  47: {
+    name: 'France 5',
+    id: '.fr'
+  },
+  160: {
+    name: 'France O',
+    id: '.fr'
+  },
+  2111: {
+    name: 'Franceinfo',
+    id: '.fr'
+  },
+  87: {
+    name: 'Game One',
+    id: '.fr'
+  },
+  1295: {
+    name: 'Golf+',
+    id: '.fr'
+  },
+  1166: {
+    name: 'Golf Channel',
+    id: '.fr'
+  },
+  621: {
+    name: 'Gong Max',
+    id: '.fr'
+  },
+  482: {
+    name: 'Gulli',
+    id: '.fr'
+  },
+  88: {
+    name: 'Histoire',
+    id: '.fr'
+  },
+  781: {
+    name: 'I24news',
+    id: '.fr'
+  },
+  701: {
+    name: 'IDF1',
+    id: '.fr'
+  },
+  94: {
+    name: 'Infosport+',
+    id: '.fr'
+  }
 }
 
 module.exports = class Grabber {
@@ -225,7 +390,12 @@ module.exports = class Grabber {
             if (maxArchiveDuration > 11) {
               maxArchiveDuration = 11
             }
+            /*
             if (epgTag.start.getTime() < new Date().getTime() + ((maxArchiveDuration - 1) * 86400000)) {
+              that.updateEpg()
+            }
+            */
+            if (moment(epgTag.start).diff(moment().add(maxArchiveDuration - 1, 'days'), 'days') > 0) {
               that.updateEpg()
             }
           }
