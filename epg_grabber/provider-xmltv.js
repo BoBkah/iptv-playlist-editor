@@ -80,7 +80,6 @@ module.exports = class Grabber {
       fileStat = fs.statSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))
     }
     if (!fs.existsSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml')) || fileStat.ctime.getTime() < new Date().getTime() - 86400000) {
-      console.log('[EPG provider ' + provider.name + '] downloading http://' + provider.host + ':' + provider.port + '/xmltv.php?username=' + provider.username + '&password=' + provider.password + '&prev_days=' + 15 + '&next_days=1')
       const response = await fetch('http://' + provider.host + ':' + provider.port + '/xmltv.php?username=' + provider.username + '&password=' + provider.password)
       const fileStream = fs.createWriteStream(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))
       await new Promise(function (resolve, reject) {
@@ -121,9 +120,8 @@ module.exports = class Grabber {
         return
       }
       if (epgTags.length === 0) {
-        // console.log('Programme not found for channel ' + programme.channel.toLowerCase() + ' title ' + programme.title[0] + ', start ' + new Date(programme.start).toISOString())
         bulkCreate.push({
-          epgid: that.epgid,
+          epgId: that.epgid,
           channel: programme.channel.toLowerCase(),
           start: new Date(programme.start),
           stop: new Date(programme.end),
@@ -133,7 +131,11 @@ module.exports = class Grabber {
       }
       // Flush bulk
       if (bulkCreate.length === 10000) {
-        await that.db.EpgTag.bulkCreate(bulkCreate)
+        try {
+          await that.db.EpgTag.bulkCreate(bulkCreate)
+        } catch (error) {
+          console.error(error)
+        }
         bulkCreate = []
         fileStream.pipe(XMLParser)
       } else {
@@ -178,6 +180,7 @@ module.exports = class Grabber {
           console.log('[EPG provider ' + provider.name + '] cleaned')
           // Optimize database
           await that.db.sequelize.query('VACUUM')
+          await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId IS NULL')
         }
       } catch (error) {
         console.log('[EPG provider ' + provider.name + '] ' + error)
