@@ -869,7 +869,7 @@ expressApp.get('/manager/api/playlist/live/:playlistLiveId/category/:playlistLiv
       model: db.LiveStream,
       include: [db.Provider, db.LiveCategory]
     }]
-  }).then(function (streams) {
+  }).then(async function (streams) {
     const result = []
     for (const streamIndex in streams) {
       const tmpStream = {}
