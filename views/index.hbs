@@ -1014,10 +1014,15 @@
                             <div class="col-3">
                                 <input type="text" name="name" class="form-control form-control-sm" placeholder="Channel name" value="\{{customName}}" stream-id="\{{id}}">
                             </div>
-                            <div class="col-2">
-                                <input type="text" name="epgid" class="form-control form-control-sm" placeholder="EPG ID" value="\{{customEpgChannelId}}" stream-id="\{{id}}">
+                            <div class="col-3">
+                                <input type="text" name="epgid" class="form-control form-control-sm\{{#if epgAvailable}} is-valid\{{else}} is-invalid\{{/if}}" placeholder="EPG ID" value="\{{customEpgChannelId}}" stream-id="\{{id}}">
+                                \{{#if epgAvailable}}
+                                <div class="valid-feedback">EPG available</div>
+                                \{{else}}
+                                <div class="invalid-feedback">EPG not available</div>
+                                \{{/if}}
                             </div>
-                            <div class="col-7">
+                            <div class="col-6">
                                 <input type="text" name="icon" class="form-control form-control-sm" placeholder="Logo URL" value="\{{customIcon}}" stream-id="\{{id}}">
                             </div>
                         </div>

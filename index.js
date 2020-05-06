@@ -884,6 +884,7 @@ expressApp.get('/manager/api/playlist/live/:playlistLiveId/category/:playlistLiv
       tmpStream.originalEpgChannelId = streams[streamIndex].LiveStream.epgChannelId
       tmpStream.customEpgChannelId = streams[streamIndex].epgChannelId
       tmpStream.epgChannelId = streams[streamIndex].epgChannelId !== null ? streams[streamIndex].epgChannelId : streams[streamIndex].LiveStream.epgChannelId
+      tmpStream.epgAvailable = await epgAvailable(tmpStream.epgChannelId)
       tmpStream.streamId = streams[streamIndex].LiveStream.streamId
       tmpStream.archive = streams[streamIndex].LiveStream.archive
       tmpStream.archiveDuration = streams[streamIndex].LiveStream.archiveDuration
@@ -1572,6 +1573,54 @@ const grantAccess = async function (username, password) {
     return false
   }
   return true
+}
+
+const epgAvailable = async function (epgId) {
+  try {
+    const result = await db.EpgTag.findOne({
+      where: {
+        channel: epgId
+      }
+    })
+    return result !== null
+  } catch (error) {
+    return false
+  }
+}
+
+const vodCategory = {
+  lastUpdate: 0,
+  movie: [],
+  serie: []
+}
+const getVodCategory = async function (provider, categoryId, type = 'movie') {
+  // Update vodCategory
+  if (vodCategory.lastUpdate === 0 || vodCategory.lastUpdate < new Date().getTime() - 3600000) {
+    vodCategory.movie = await requestProvider(provider, {
+      action: 'get_vod_categories'
+    })
+    vodCategory.serie = await requestProvider(provider, {
+      action: 'get_series_categories'
+    })
+  }
+  for (const movieIndex in vodCategory[type]) {
+    if (vodCategory[type][movieIndex].category_id === categoryId) {
+      return vodCategory[type][movieIndex]
+    }
+  }
+  // Not found
+  return false
+}
+
+const uniqueArray = function (a) {
+  for (let i = 0; i < a.length; ++i) {
+    for (let j = i + 1; j < a.length; ++j) {
+      if (a[i] === a[j]) {
+        a.splice(j--, 1)
+      }
+    }
+  }
+  return a
 }
 
 // Request HTTP
