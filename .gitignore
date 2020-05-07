@@ -3,5 +3,6 @@ yarn.lock
 package-lock.json
 database/*
 !database/.gitkeep
-build/*
 temp/*
+!temp/.gitkeep
+build/*

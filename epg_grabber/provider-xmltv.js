@@ -76,6 +76,9 @@ module.exports = class Grabber {
     console.log('[EPG provider ' + provider.name + '] updating...')
     // Download XMLTV from provider only if file older than 1 day
     let fileStat = {}
+    if (!fs.existsSync(path.join(process.cwd(), 'temp'))) {
+      fs.mkdirSync(path.join(process.cwd(), 'temp'))
+    }
     if (fs.existsSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))) {
       fileStat = fs.statSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))
     }
