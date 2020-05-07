@@ -1577,12 +1577,14 @@ const grantAccess = async function (username, password) {
 
 const epgAvailable = async function (epgId) {
   try {
-    const result = await db.EpgTag.findOne({
-      where: {
-        channel: epgId
+    const result = await await db.sequelize.query('SELECT channel FROM EpgTag WHERE channel = :channel AND date(start) = :start LIMIT 0,1', {
+      type: db.sequelize.QueryTypes.SELECT,
+      replacements: {
+        channel: epgId,
+        start: moment().format('YYYY-MM-DD')
       }
     })
-    return result !== null
+    return result.length > 0
   } catch (error) {
     return false
   }
