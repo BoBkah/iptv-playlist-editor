@@ -114,10 +114,6 @@ const channels = {
     name: 'Boomerang',
     id: 'boomerang.fr'
   },
-  192: {
-    name: 'TF1',
-    id: 'tf1.fr'
-  },
   445: {
     name: 'C8',
     id: 'c8.fr'
@@ -232,119 +228,567 @@ const channels = {
   },
   300: {
     name: 'Disney Junior',
-    id: '.fr'
+    id: 'disneyjunior.fr'
   },
   79: {
     name: 'Disney XD',
-    id: '.fr'
+    id: 'disneyxd.fr'
   },
-  92: {
+  560: {
     name: 'Dorcel TV',
-    id: '.fr'
+    id: 'dorcel.fr'
   },
   405: {
     name: 'E !',
-    id: '.fr'
+    id: 'eentertainment.fr'
   },
   403: {
     name: 'ElleGirl',
-    id: '.fr'
+    id: 'ellegirl.fr'
   },
   64: {
     name: 'Equidia',
-    id: '.fr'
+    id: 'equidia.fr'
   },
   1146: {
     name: 'Equidia Life',
-    id: '.fr'
+    id: 'equidialife.fr'
+  },
+  1190: {
+    name: 'Eurochannel',
+    id: 'eurochannel.fr'
   },
   140: {
     name: 'Euronews',
-    id: '.fr'
+    id: 'euronews.fr'
   },
   76: {
     name: 'Eurosport 1',
-    id: '.fr'
+    id: 'eurosport1.fr'
   },
   439: {
-    name: 'Eurospot 2',
-    id: '.fr'
+    name: 'Eurosport 2',
+    id: 'eurosport2.fr'
   },
   253: {
     name: 'Extreme Sports Channel',
-    id: '.fr'
+    id: 'extremesports.fr'
   },
   1996: {
     name: 'Fashion TV',
-    id: '.fr'
+    id: 'fashiontv.fr'
   },
   100: {
     name: 'Foot+ 24/24',
-    id: '.fr'
+    id: 'foot+.fr'
   },
   4: {
     name: 'France 2',
-    id: '.fr'
+    id: 'france2.fr'
   },
   529: {
     name: 'France 24',
-    id: '.fr'
+    id: 'france24.fr'
   },
   80: {
     name: 'France 3',
-    id: '.fr'
+    id: 'france3.fr'
   },
   78: {
     name: 'France 4',
-    id: '.fr'
+    id: 'france4.fr'
   },
   47: {
     name: 'France 5',
-    id: '.fr'
+    id: 'france5.fr'
   },
   160: {
-    name: 'France O',
-    id: '.fr'
+    name: 'France Ô',
+    id: 'franceo.fr'
   },
   2111: {
     name: 'Franceinfo',
-    id: '.fr'
+    id: 'franceinfo.fr'
   },
   87: {
     name: 'Game One',
-    id: '.fr'
+    id: 'gameone.fr'
+  },
+  563: {
+    name: 'Ginx',
+    id: 'ginx.fr'
   },
   1295: {
     name: 'Golf+',
-    id: '.fr'
+    id: 'golfplus.fr'
   },
   1166: {
     name: 'Golf Channel',
-    id: '.fr'
+    id: 'golfchannel.fr'
   },
   621: {
     name: 'Gong Max',
-    id: '.fr'
+    id: 'gongmax.fr'
   },
   482: {
     name: 'Gulli',
-    id: '.fr'
+    id: 'gulli.fr'
   },
   88: {
     name: 'Histoire',
-    id: '.fr'
+    id: 'histoire.fr'
+  },
+  416: {
+    name: 'Hustler TV',
+    id: 'hustlertv.fr'
   },
   781: {
     name: 'I24news',
-    id: '.fr'
+    id: 'i24news.fr'
   },
   701: {
     name: 'IDF1',
-    id: '.fr'
+    id: 'idf1.fr'
   },
   94: {
     name: 'Infosport+',
-    id: '.fr'
+    id: 'infosportplus.fr'
+  },
+  1585: {
+    name: 'J-One',
+    id: 'jone.fr'
+  },
+  110: {
+    name: 'KTO',
+    id: 'kto.fr'
+  },
+  929: {
+    name: 'KZTV',
+    id: 'ktztv.fr'
+  },
+  1401: {
+    name: 'L\'Equipe',
+    id: 'lequipe.fr'
+  },
+  124: {
+    name: 'La Chaîne Météo',
+    id: 'lachainemeteo.fr'
+  },
+  234: {
+    name: 'La Chaîne parlementaire',
+    id: 'lachaineparlementaire.fr'
+  },
+  187: {
+    name: 'La Deux',
+    id: 'ladeux.be'
+  },
+  892: {
+    name: 'La Trois',
+    id: 'latrois.be'
+  },
+  164: {
+    name: 'La Une',
+    id: 'laune.be'
+  },
+  112: {
+    name: 'LCI',
+    id: 'lci.fr'
+  },
+  118: {
+    name: 'M6',
+    id: 'm6.fr'
+  },
+  184: {
+    name: 'M6 Boutique',
+    id: 'm6boutique.fr'
+  },
+  453: {
+    name: 'M6 Music',
+    id: 'm6music.fr'
+  },
+  683: {
+    name: 'Man-X',
+    id: 'manx.fr'
+  },
+  6: {
+    name: 'Mangas',
+    id: 'mangas.fr'
+  },
+  987: {
+    name: 'MCE (Ma Chaîne Etudiante)',
+    id: 'mce.fr'
+  },
+  121: {
+    name: 'MCM',
+    id: 'mcm.fr'
+  },
+  343: {
+    name: 'MCM Top',
+    id: 'mcmtop.fr'
+  },
+  1136: {
+    name: 'MCS Bien-être',
+    id: 'mcsbienetre.fr'
+  },
+  2021: {
+    name: 'MCS Maison',
+    id: 'mcsmaison.fr'
+  },
+  265: {
+    name: 'Melody',
+    id: 'melody.fr'
+  },
+  125: {
+    name: 'Mezzo',
+    id: 'mezzo.fr'
+  },
+  907: {
+    name: 'Mezzo Live HD',
+    id: 'mezzolive.fr'
+  },
+  1045: {
+    name: 'Mirabelle TV',
+    id: 'mirabelle.fr'
+  },
+  237: {
+    name: 'Motorsport TV',
+    id: 'motorsport.fr'
+  },
+  128: {
+    name: 'MTV',
+    id: 'mtv.fr'
+  },
+  263: {
+    name: 'MTV Base',
+    id: 'mtvbase.fr'
+  },
+  2014: {
+    name: 'MTV Dance',
+    id: 'mtvdance.fr'
+  },
+  262: {
+    name: 'MTV Hits',
+    id: 'mtvhits.fr'
+  },
+  2006: {
+    name: 'MTV Hits (France)',
+    id: 'mtvhitsfrance.fr'
+  },
+  264: {
+    name: 'MTV Rocks',
+    id: 'mtvrocks.fr'
+  },
+  98: {
+    name: 'Multisports',
+    id: 'multisports.fr'
+  },
+  101: {
+    name: 'Multisports 1',
+    id: 'multisports1.fr'
+  },
+  102: {
+    name: 'Multisports 2',
+    id: 'multisports2.fr'
+  },
+  103: {
+    name: 'Multisports 3',
+    id: 'multisports3.fr'
+  },
+  104: {
+    name: 'Multisports 4',
+    id: 'multisports4.fr'
+  },
+  105: {
+    name: 'Multisports 5',
+    id: 'multisports5.fr'
+  },
+  106: {
+    name: 'Multisports 6',
+    id: 'multisports6.fr'
+  },
+  1072: {
+    name: 'Museum',
+    id: 'museum.fr'
+  },
+  243: {
+    name: 'National Geographic',
+    id: 'nationalgeographic.fr'
+  },
+  719: {
+    name: 'National Geographic Wild',
+    id: 'nationalgeographicwild.fr'
+  },
+  415: {
+    name: 'Nautical Channel',
+    id: 'nautical.fr'
+  },
+  473: {
+    name: 'Nickelodéon',
+    id: 'nickelodeon.fr'
+  },
+  888: {
+    name: 'Nickelodeon Junior',
+    id: 'nickelodeonjunior.fr'
+  },
+  1746: {
+    name: 'Nickelodéon Teen',
+    id: 'nickelodeonteen.fr'
+  },
+  787: {
+    name: 'Nolife',
+    id: 'nolife.fr'
+  },
+  1461: {
+    name: 'Nollywood TV',
+    id: 'nollywood.fr'
+  },
+  444: {
+    name: 'NRJ 12',
+    id: 'nrj12.fr'
+  },
+  605: {
+    name: 'NRJ Hits',
+    id: 'nrjhits.fr'
+  },
+  732: {
+    name: 'OCS Choc',
+    id: 'ocschoc.fr'
+  },
+  733: {
+    name: 'OCS City',
+    id: 'ocscity.fr'
+  },
+  734: {
+    name: 'OCS Géants',
+    id: 'ocsgeants.fr'
+  },
+  730: {
+    name: 'OCS Max',
+    id: 'ocsmax.fr'
+  },
+  463: {
+    name: 'OLTV',
+    id: 'oltv.fr'
+  },
+  334: {
+    name: 'OMTV',
+    id: 'omtv.fr'
+  },
+  517: {
+    name: 'Onzéo',
+    id: 'onzeo.fr'
+  },
+  1562: {
+    name: 'Paramount Channel',
+    id: 'paramount.fr'
+  },
+  145: {
+    name: 'Paris Première',
+    id: 'parispremiere.fr'
+  },
+  406: {
+    name: 'Pink TV',
+    id: 'pinktv.fr'
+  },
+  344: {
+    name: 'Piwi+',
+    id: 'piwiplus.fr'
+  },
+  147: {
+    name: 'Planète+',
+    id: 'planeteplus.fr'
+  },
+  402: {
+    name: 'Planète+ Aventure Expérience',
+    id: 'planetenolimit.fr'
+  },
+  662: {
+    name: 'Planète+ Crime Investigation',
+    id: 'planetejustice.fr'
+  },
+  2326: {
+    name: 'Polar+',
+    id: 'polarplus.fr'
+  },
+  289: {
+    name: 'Polar',
+    id: 'polar.fr'
+  },
+  241: {
+    name: 'RFM TV',
+    id: 'rfmtv.fr'
+  },
+  546: {
+    name: 'RMC',
+    id: 'rmc.fr'
+  },
+  1400: {
+    name: 'RMC Découverte',
+    id: 'rmcdecouverte.fr'
+  },
+  1382: {
+    name: 'RMC Sport 4',
+    id: 'rmcsport4.fr'
+  },
+  2095: {
+    name: 'RMC Sport Access 1',
+    id: 'rmcsportaccess1.fr'
+  },
+  675: {
+    name: 'RMC Sport Access 2',
+    id: 'rmcsportaccess2.fr'
+  },
+  2029: {
+    name: 'RMC Sport UHD',
+    id: 'rmcsportuhd.fr'
+  },
+  1402: {
+    name: 'RMC Story',
+    id: 'rmcstory.fr'
+  },
+  115: {
+    name: 'RTL 9',
+    id: 'rtl9.fr'
+  },
+  183: {
+    name: 'RTS Deux',
+    id: 'rtsdeux.ch'
+  },
+  202: {
+    name: 'RTS Un',
+    id: 'rtsun.ch'
+  },
+  63: {
+    name: 'Science & Vie TV',
+    id: 'scienceetvietv.fr'
+  },
+  173: {
+    name: 'Seasons',
+    id: 'seasons.fr'
+  },
+  49: {
+    name: 'SERIECLUB',
+    id: 'serieclub.fr'
+  },
+  1153: {
+    name: 'SFR Sport 4',
+    id: 'rmcsport4.fr'
+  },
+  833: {
+    name: 'Sundance TV',
+    id: 'sundance.fr'
+  },
+  479: {
+    name: 'Syfy',
+    id: 'syfy.fr'
+  },
+  185: {
+    name: 'TCM Cinéma',
+    id: 'tcm.fr'
+  },
+  197: {
+    name: 'TéléToon+',
+    id: 'teletoon.fr'
+  },
+  293: {
+    name: 'TéléToon+1',
+    id: 'teletoonplusun.fr'
+  },
+  191: {
+    name: 'Téva',
+    id: 'teva.fr'
+  },
+  192: {
+    name: 'TF1',
+    id: 'tf1.fr'
+  },
+  1404: {
+    name: 'TF1 Séries Films',
+    id: 'tf1seriesfilms.fr'
+  },
+  446: {
+    name: 'TFX',
+    id: 'tfx.fr'
+  },
+  229: {
+    name: 'TIJI',
+    id: 'tiji.fr'
+  },
+  195: {
+    name: 'TMC',
+    id: 'tmc.fr'
+  },
+  2040: {
+    name: 'Toonami',
+    id: 'toonami.fr'
+  },
+  7: {
+    name: 'Toute l\'histoire',
+    id: 'toutelhistoire.fr'
+  },
+  1179: {
+    name: 'Trace Africa',
+    id: 'traceafrica.fr'
+  },
+  1168: {
+    name: 'TRACE Sport Stars',
+    id: 'tracesport.fr'
+  },
+  1948: {
+    name: 'Trace Toca',
+    id: 'tracetoca.fr'
+  },
+  753: {
+    name: 'Trace Tropical',
+    id: 'tracetropical.fr'
+  },
+  325: {
+    name: 'Trace Urban',
+    id: 'traceurban.fr'
+  },
+  1776: {
+    name: 'Trek',
+    id: 'trek.fr'
+  },
+  205: {
+    name: 'TV5MONDE',
+    id: 'tv5monde.fr'
+  },
+  225: {
+    name: 'TvBreizh',
+    id: 'tvbreizh.fr'
+  },
+  451: {
+    name: 'Ushuaïa TV',
+    id: 'ushuaia.fr'
+  },
+  210: {
+    name: 'VH1',
+    id: 'vh1.fr'
+  },
+  690: {
+    name: 'VH1 Classic',
+    id: 'vh1classic.fr'
+  },
+  659: {
+    name: 'Vivolta',
+    id: 'vivolta.fr'
+  },
+  212: {
+    name: 'Voyage',
+    id: 'voyage.fr'
+  },
+  119: {
+    name: 'W9',
+    id: 'w9.fr'
+  },
+  2334: {
+    name: 'Warner TV',
+    id: 'warnertv.fr'
+  },
+  218: {
+    name: 'XXL',
+    id: 'xxl.fr'
   }
 }
 
@@ -354,6 +798,7 @@ module.exports = class Grabber {
     this.epgid = null
     this.db = db
     const that = this
+    this.channels = channels
     // Add this grabber
     db.Epg.findOne({
       where: {
