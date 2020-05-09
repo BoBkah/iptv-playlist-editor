@@ -878,7 +878,7 @@ module.exports = class Grabber {
     // For each channel exists in channels, get EPG
     const channelGroup = [[]]
     let channelGroupIndex = 0
-    let startDate = 0
+    let startDate = moment().subtract(11, 'days').toDate()
     for (const channelIndex in channelGrid.donnees.chaines) {
       if (Object.prototype.hasOwnProperty.call(channels, channelGrid.donnees.chaines[channelIndex].id)) {
         // Get last program date
@@ -892,6 +892,7 @@ module.exports = class Grabber {
           ],
           limit: 1
         })
+        /*
         // Define start date
         if (lastEpgTagChannel !== null) {
           const lastEpgTagChannelStart = new Date(lastEpgTagChannel.start).getTime() / 1000
@@ -923,12 +924,20 @@ module.exports = class Grabber {
             startDate = Math.round(new Date().getTime() / 1000) - (maxArchiveDuration * 86400)
           }
         }
-        // Group channel by 32
+        */
+        if (lastEpgTagChannel === null) {
+          startDate = moment().subtract(11, 'days').toDate()
+        } else if (moment(lastEpgTagChannel.start).diff(moment().add(11, 'days')) < 0) {
+          if (moment(startDate).diff(lastEpgTagChannel.start) < 0) {
+            startDate = lastEpgTagChannel.start
+          }
+        }
+        channelGroup[channelGroupIndex].push(channelGrid.donnees.chaines[channelIndex].id)
+        // Group channels by 32
         if (channelGroup[channelGroupIndex].length === 32) {
           channelGroupIndex++
           channelGroup[channelGroupIndex] = []
         }
-        channelGroup[channelGroupIndex].push(channelGrid.donnees.chaines[channelIndex].id)
       }
     }
     // Get EpgTag
@@ -937,9 +946,9 @@ module.exports = class Grabber {
       if (channelGroup[channelGroupIndex].length === 0) {
         continue
       }
-      // End date: today + 10 days
+      // End date: today + 11 days
       const endDate = new Date(new Date().getTime() + 11 * 24 * 60 * 60000)
-      let epgDay = new Date(startDate * 1000)
+      let epgDay = startDate
       while (Math.round(endDate.getTime() / 86400000) > Math.round(epgDay.getTime() / 86400000)) {
         let epgTagList = {}
         try {

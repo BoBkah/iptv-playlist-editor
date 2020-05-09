@@ -4,7 +4,7 @@ module.exports = (sequelize, DataTypes) => {
     name: DataTypes.STRING,
     grabber: DataTypes.STRING,
     lastScan: DataTypes.DATE,
-    updatePeriod: DataTypes.INTEGER,
+    updateTime: DataTypes.STRING,
     status: DataTypes.BOOLEAN
   }, {
     freezeTableName: true

@@ -2,6 +2,7 @@
 
 const fetch = require('node-fetch')
 const fs = require('fs')
+const moment = require('moment')
 const momentTz = require('moment-timezone')
 const path = require('path')
 const xmltv = require('xmltv')
@@ -38,7 +39,7 @@ module.exports = class Grabber {
     // Verify archive file
     if (fs.existsSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))) {
       const fileStat = fs.statSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))
-      if (fileStat.ctime.getTime() < new Date().getTime() - 86400000) {
+      if (moment(fileStat.ctime).startOf('day').unix() < moment().startOf('day').unix()) {
         this.updateEpg()
       }
     } else {
@@ -82,7 +83,8 @@ module.exports = class Grabber {
     if (fs.existsSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))) {
       fileStat = fs.statSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))
     }
-    if (!fs.existsSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml')) || fileStat.ctime.getTime() < new Date().getTime() - 86400000) {
+    if (!fs.existsSync(path.join(process.cwd(), 'temp/' + provider.name + '.xml')) || moment(fileStat.ctime).startOf('day').unix() < moment().startOf('day').unix()) {
+      console.log('[EPG provider ' + provider.name + '] downloading EPG...')
       const response = await fetch('http://' + provider.host + ':' + provider.port + '/xmltv.php?username=' + provider.username + '&password=' + provider.password)
       const fileStream = fs.createWriteStream(path.join(process.cwd(), 'temp/' + provider.name + '.xml'))
       await new Promise(function (resolve, reject) {
@@ -91,7 +93,7 @@ module.exports = class Grabber {
           return reject(error)
         })
         response.body.on('finish', function () {
-          console.log('[EPG provider ' + provider.name + '] Download finished')
+          console.log('[EPG provider ' + provider.name + '] download finished')
           return resolve()
         })
       })
@@ -102,92 +104,96 @@ module.exports = class Grabber {
       highWaterMark: 100
     })
     fileStream.pause()
-    const XMLParser = new xmltv.Parser()
-    fileStream.pipe(XMLParser)
-    let bulkCreate = []
-    XMLParser.on('programme', async function (programme) {
-      fileStream.unpipe()
-      // Search programme
-      let epgTags = []
-      try {
-        epgTags = await that.db.sequelize.query('SELECT id FROM epgTag WHERE epgId = :epgid AND channel = :channel AND start = :startDate', {
-          type: that.db.sequelize.QueryTypes.SELECT,
-          replacements: {
-            epgid: that.epgid,
-            channel: programme.channel.toLowerCase(),
-            startDate: momentTz(programme.start).utcOffset('+00:00').format('YYYY-MM-DD HH:mm:ss.SSS Z')
-          }
-        })
-      } catch (error) {
-        console.log(error)
-        return
-      }
-      if (epgTags.length === 0) {
-        bulkCreate.push({
-          epgId: that.epgid,
-          channel: programme.channel.toLowerCase(),
-          start: new Date(programme.start),
-          stop: new Date(programme.end),
-          title: programme.title[0],
-          description: programme.desc[0]
-        })
-      }
-      // Flush bulk
-      if (bulkCreate.length === 10000) {
+    await new Promise(function (resolve, reject) {
+      const XMLParser = new xmltv.Parser()
+      fileStream.pipe(XMLParser)
+      let bulkCreate = []
+      XMLParser.on('programme', async function (programme) {
+        fileStream.unpipe()
+        // Search programme
+        let epgTags = []
         try {
-          await that.db.EpgTag.bulkCreate(bulkCreate)
-        } catch (error) {
-          console.error(error)
-        }
-        bulkCreate = []
-        fileStream.pipe(XMLParser)
-      } else {
-        fileStream.pipe(XMLParser)
-      }
-    })
-    XMLParser.on('end', async function () {
-      // Flush bulk
-      if (bulkCreate.length > 0) {
-        await that.db.EpgTag.bulkCreate(bulkCreate)
-      }
-      // Update last update
-      await that.db.Epg.update({
-        lastScan: new Date()
-      }, {
-        where: {
-          id: that.epgid
-        }
-      })
-      console.log('[EPG provider ' + provider.name + '] XMLTV parsing finished')
-      // Clean EPG programmes
-      try {
-        const liveStream = await that.db.LiveStream.findOne({
-          where: {
-            providerId: provider.id
-          },
-          order: [
-            ['archiveDuration', 'DESC']
-          ],
-          limit: 1
-        })
-        if (liveStream !== null) {
-          const stopDate = Math.round(new Date().getTime() / 1000) - (liveStream.archiveDuration * 86400)
-          // Delete old entries
-          await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId = :epgid AND stop < :stopDate', {
+          epgTags = await that.db.sequelize.query('SELECT id FROM epgTag WHERE epgId = :epgid AND channel = :channel AND start = :startDate', {
             type: that.db.sequelize.QueryTypes.SELECT,
             replacements: {
               epgid: that.epgid,
-              stopDate: new Date(stopDate)
+              channel: programme.channel.toLowerCase(),
+              startDate: momentTz(programme.start).utcOffset('+00:00').format('YYYY-MM-DD HH:mm:ss.SSS Z')
             }
           })
-          console.log('[EPG provider ' + provider.name + '] cleaned')
-          // Optimize database
-          await that.db.sequelize.query('VACUUM')
-          await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId IS NULL')
+        } catch (error) {
+          console.log(error)
+          return
         }
-      } catch (error) {
-        console.log('[EPG provider ' + provider.name + '] ' + error)
-      }
+        if (epgTags.length === 0) {
+          bulkCreate.push({
+            epgId: that.epgid,
+            channel: programme.channel.toLowerCase(),
+            start: new Date(programme.start),
+            stop: new Date(programme.end),
+            title: programme.title[0],
+            description: programme.desc[0]
+          })
+        }
+        // Flush bulk
+        if (bulkCreate.length === 10000) {
+          try {
+            await that.db.EpgTag.bulkCreate(bulkCreate)
+          } catch (error) {
+            console.error(error)
+          }
+          bulkCreate = []
+          fileStream.pipe(XMLParser)
+        } else {
+          fileStream.pipe(XMLParser)
+        }
+      })
+      XMLParser.on('end', async function () {
+        // Flush bulk
+        if (bulkCreate.length > 0) {
+          await that.db.EpgTag.bulkCreate(bulkCreate)
+        }
+        // Update last update
+        await that.db.Epg.update({
+          lastScan: new Date()
+        }, {
+          where: {
+            id: that.epgid
+          }
+        })
+        console.log('[EPG provider ' + provider.name + '] XMLTV parsing finished')
+        // Clean EPG programmes
+        try {
+          const liveStream = await that.db.LiveStream.findOne({
+            where: {
+              providerId: provider.id
+            },
+            order: [
+              ['archiveDuration', 'DESC']
+            ],
+            limit: 1
+          })
+          if (liveStream !== null) {
+            const stopDate = Math.round(new Date().getTime() / 1000) - (liveStream.archiveDuration * 86400)
+            // Delete old entries
+            await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId = :epgid AND stop < :stopDate', {
+              type: that.db.sequelize.QueryTypes.SELECT,
+              replacements: {
+                epgid: that.epgid,
+                stopDate: new Date(stopDate)
+              }
+            })
+            console.log('[EPG provider ' + provider.name + '] cleaned')
+            // Optimize database
+            await that.db.sequelize.query('VACUUM')
+            await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId IS NULL')
+            resolve()
+          }
+        } catch (error) {
+          reject(error)
+          console.log('[EPG provider ' + provider.name + '] ' + error)
+        }
+      })
     })
   }
 }

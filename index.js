@@ -137,8 +137,11 @@ expressApp.get('/manager/api/epg', function (req, res) {
         id: epgs[epgIndex].id,
         name: epgs[epgIndex].name,
         channels: channels,
-        min: dates.min,
-        max: dates.max,
+        min: dates.min !== null ? moment(dates.min).format('YYYY-MM-DD HH:mm:ss') : '-',
+        max: dates.max !== null ?moment(dates.max).format('YYYY-MM-DD HH:mm:ss') : '-',
+        lastScan: moment(epgs[epgIndex].lastScan).format('YYYY-MM-DD HH:mm:ss'),
+        updateTime: epgs[epgIndex].updateTime,
+        provider: epgs[epgIndex].providerId,
         status: epgs[epgIndex].status
       })
     }
@@ -183,6 +186,17 @@ expressApp.get('/manager/api/epg/:epgId', function (req, res) {
     if (epg === null) {
       return res.status(404).send('EPG not exists')
     }
+    // Add channels defined
+    for (const grabberIndex in epgGrabber.grabber) {
+      if (epgGrabber.grabber[grabberIndex].epgid === parseInt(req.params.epgId)) {
+        if (Object.prototype.hasOwnProperty.call(epgGrabber.grabber[grabberIndex], 'channels')) {
+          epg.dataValues.channels = []
+          for (const channelIndex in epgGrabber.grabber[grabberIndex].channels) {
+            epg.dataValues.channels.push(epgGrabber.grabber[grabberIndex].channels[channelIndex])
+          }
+        }
+      }
+    }
     res.status(200).send(epg)
   })
 })
@@ -199,6 +213,9 @@ expressApp.put('/manager/api/epg/:epgId', async function (req, res) {
   if (Object.prototype.hasOwnProperty.call(body, 'status')) {
     data.status = body.status
   }
+  if (Object.prototype.hasOwnProperty.call(body, 'updateTime')) {
+    data.updateTime = body.updateTime
+  }
   db.Epg.update(data, { where: { id: req.params.epgId } }).then(function () {
     return res.status(200).send('EPG updated')
   }).catch(function (error) {
@@ -207,13 +224,20 @@ expressApp.put('/manager/api/epg/:epgId', async function (req, res) {
 })
 // Update EPG catalog
 expressApp.get('/manager/api/epg/:epgId/update', async function (req, res) {
+  let grabberFound = false
   for (const grabberIndex in epgGrabber.grabber) {
     if (epgGrabber.grabber[grabberIndex].epgid === parseInt(req.params.epgId)) {
-      await epgGrabber.grabber[grabberIndex].updateEpg()
-      return res.status(200).send('EPG updated')
+      grabberFound = true
+      await epgGrabber.grabber[grabberIndex].updateEpg().then(function () {
+        return res.status(200).send('EPG updated')
+      }).catch(function (error) {
+        return res.status(500).send(error)
+      })
     }
   }
-  return res.status(404).send('EPG grabber not found')
+  if (!grabberFound) {
+    return res.status(404).send('EPG grabber not found')
+  }
 })
 // Delete EPG
 expressApp.delete('/manager/api/epg/:epgId', async function (req, res) {
@@ -221,8 +245,12 @@ expressApp.delete('/manager/api/epg/:epgId', async function (req, res) {
   if (epg === null) {
     return res.status(400).send('EPG not exists')
   }
-  epg.destroy().then(function () {
-    res.status(200).send('EPG deleted')
+  db.EpgTag.destroy({
+    where: {
+      epgId: req.params.epgId
+    }
+  }).then(function () {
+    res.status(200).send('EPG tags deleted')
   }).catch(function (error) {
     return res.status(500).send(error.message)
   })
@@ -1447,7 +1475,7 @@ expressApp.get(['/streaming/timeshift.php', '/timeshift/:username/:password/:dur
   return res.redirect('http://' + providerLiveStream.Provider.host + ':' + providerLiveStream.Provider.port + '/streaming/timeshift.php?username=' + providerLiveStream.Provider.username + '&password=' + providerLiveStream.Provider.password + '&stream=' + providerLiveStream.streamId + '&start=' + params.start + '&duration=' + params.duration)
 })
 // Play list stream
-expressApp.get('/:username/:password/:id', function (req, res) {
+expressApp.get('^/:username/:password/:id([0-9]*)', function (req, res) {
 
 })
 // EPG
@@ -1519,7 +1547,7 @@ expressApp.get('/xmltv.php', async function (req, res) {
   res.end()
 })
 // Play live stream
-expressApp.get(['/streaming/client_live.php', '/live/:username/:password/:streamId.:extension', '/live/:username/:password/:streamId', '/:username/:password/:streamId.:extension', '/:streamId.:extension', '/ch:streamId.m3u8', '/hls/:username/:password/:streamId/:token/:segment', '/hlsr/:username/:password/:streamId/:token/:segment'], async function (req, res) {
+expressApp.get(['/streaming/client_live.php', '/live/:username/:password/:streamId.:extension', '/live/:username/:password/:streamId', '^/:username/:password/:streamId.:extension(ts|rtmp|m3u8)', '/:streamId.:extension', '/ch:streamId.m3u8', '/hls/:username/:password/:streamId/:token/:segment', '/hlsr/:username/:password/:streamId/:token/:segment'], async function (req, res) {
   // Verify username / password
   if (!Object.prototype.hasOwnProperty.call(req.params, 'username') || !Object.prototype.hasOwnProperty.call(req.params, 'password')) {
     return res.status(400).send('Bad request')

@@ -5,6 +5,7 @@
         <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous"> -->
         <link rel="stylesheet" href="/lib/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-toast.js@1.0.8/css/bootstrap-toast.min.css" integrity="sha256-brHFMMl0+rWPVzFXXH2wQfh+ce9bAtzOFkZ848v6iUs=" crossorigin="anonymous">
         <style>
             .content {
                 padding-top: 20px;
@@ -116,6 +117,9 @@
         <script src="https://SortableJS.github.io/Sortable/Sortable.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/5.4.0/bootbox.min.js"></script>
         <script src="https://cdn.jsdelivr.net/gh/xcash/bootstrap-autocomplete@v2.3.4/dist/latest/bootstrap-autocomplete.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.25.3/moment.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap-toast.js@1.0.8/js/bootstrap-toast.min.js" integrity="sha256-xAVWHb2y3Yii6cfnGu69a9iMSxYdGduWX2hu3gHJK1g=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js" integrity="sha256-Kg2zTcFO9LXOc7IwcBx1YeUBJmekycsnTsq2RuFHSZU=" crossorigin="anonymous"></script>
         <script>
             Handlebars.registerHelper('isSelected', function (optionValue, selectedValue) {
                 if (Array.isArray(selectedValue)) {
@@ -163,6 +167,7 @@
                 }
             })
             $(document).ready(function () {
+                setToastPosition(TOAST_POSITION.BOTTOM_RIGHT)
                 // Provider
                 var providerList = []
                 const providerUpdate = function (providerId) {
@@ -618,14 +623,12 @@
                                     }
                                 })
                                 $('#playlistStreamList input[name=epgid]').on('autocomplete.select', function (e) {
-                                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $(this).attr('stream-id'), { epgChannelId: $(this).val() }).then(function () {
-                                        
-                                    })
+                                    axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $(this).attr('stream-id'), { epgChannelId: $(this).val() })
                                 })
-                                $('#playlistStreamList input[name=name').on('keyup', function (e) {
+                                $('#playlistStreamList input[name=name]').on('keyup', function (e) {
                                     axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $(this).attr('stream-id'), { name: $(this).val() })
                                 })
-                                $('#playlistStreamList input[name=icon').on('keyup', function (e) {
+                                $('#playlistStreamList input[name=icon]').on('keyup', function (e) {
                                     axios.put('/manager/api/playlist/live/' + $('#playlistList option:selected').val() + '/category/' + $('#playlistCategoryList div.active').attr('category-id') + '/stream/' + $(this).attr('stream-id'), { icon: $(this).val() })
                                 })
                             }
@@ -735,10 +738,55 @@
                         })
                         $('.epgButtonUpdate').each(function() {
                             $(this).on('click', function () {
+                                let epgName = $(this).attr('epg-name')
+                                toastGenerator('EPG', epgName + ' update started', TOAST_STATUS.INFO, 5000);
                                 axios.get('/manager/api/epg/' + $(this).attr('epg-id') + '/update').then(function () {
+                                    toastGenerator('EPG', epgName + ' update finished', TOAST_STATUS.SUCCESS, 5000);
                                     epgUpdate()
                                 })
                             })
+                        })
+                        $('.epgButtonClear').each(function() {
+                            $(this).on('click', function () {
+                                let epgId = $(this).attr('epg-id')
+                                let epgName = $(this).attr('epg-name')
+                                bootbox.dialog({
+                                    title: 'EPG: erase programs',
+                                    message: 'Confirm programs deletion of ' + epgName,
+                                    onEscape: true,
+                                    backdrop: true,
+                                    buttons: {
+                                        cancel: {
+                                            label: 'Cancel',
+                                            class: 'btn-default',
+                                            callback: function () {}
+                                        },
+                                        clear: {
+                                            label: 'Clear',
+                                            class: 'btn-danger',
+                                            callback: function () {
+                                                toastGenerator('EPG', epgName + ' delete started', TOAST_STATUS.INFO, 5000);
+                                                axios.delete('/manager/api/epg/' + epgId).then(function () {
+                                                    epgUpdate()
+                                                    toastGenerator('EPG', epgName + ' delete finished', TOAST_STATUS.SUCCESS, 5000);
+                                                    bootbox.hideAll()
+                                                })
+                                            }
+                                        }
+                                    }
+                                })
+                            })
+                        })
+                        $('.epgUpdateTime').each(function() {
+                            let that = this
+                            $(this).mask('00:00')
+                            $(this).keyup(delayInput(function () {
+                                axios.put('/manager/api/epg/' + $(that).attr('epg-id'), {
+                                    updateTime: $(that).val()
+                                }).then(function () {
+                                    epgUpdate()
+                                })
+                            }, 1000))
                         })
                     })
                 }
@@ -766,6 +814,17 @@
                 $(window).on('hashchange', function () {
                     changePage()
                 })
+                // Functions
+                const delayInput = function (callback, ms) {
+                    let timer = 0
+                    return function () {
+                        let context = this, args = arguments
+                        clearTimeout(timer)
+                        timer = setTimeout(function () {
+                            callback.apply(context, args)
+                        }, ms || 0)
+                    }
+                }
                 changePage()
             })
         </script>
@@ -821,7 +880,9 @@
                         <th scope="col"># Channels</th>
                         <th scope="col">First program</th>
                         <th scope="col">Last program</th>
-                        <th scope="col">Action</th>
+                        <th scope="col">Update hour</th>
+                        <th scope="col">Last update</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -831,7 +892,19 @@
                         <td>\{{channels}}</td>
                         <td>\{{min}}</td>
                         <td>\{{max}}</td>
-                        <td>\{{#if status}}<button type="button" class="btn btn-secondary btn-sm epgButtonDisable" epg-id="\{{id}}">Disable</button>\{{else}}<button type="button" class="btn btn-success btn-sm epgButtonEnable" epg-id="\{{id}}">Enable</button>\{{/if}} <button class="btn btn-sm btn-primary epgButtonUpdate" epg-id="\{{id}}">Update</button></td>
+                        <td>
+                           <input type="text" class="w-25 form-control form-control-sm epgUpdateTime" epg-id="\{{id}}" value="\{{updateTime}}">
+                        </td>
+                        <td>
+                            \{{lastScan}}
+                        </td>
+                        <td>
+                            \{{#if status}}<button type="button" class="btn btn-secondary btn-sm epgButtonDisable" epg-id="\{{id}}">Disable</button>
+                            \{{else}}<button type="button" class="btn btn-success btn-sm epgButtonEnable" epg-id="\{{id}}">Enable</button>
+                            \{{/if}}
+                            <button class="btn btn-sm btn-primary epgButtonUpdate" epg-id="\{{id}}" epg-name="\{{name}}">Update</button>
+                            <button class="btn btn-sm btn-danger epgButtonClear" epg-id="\{{id}}" epg-name="\{{name}}">Clear</button>
+                            </td>
                     </tr>
                     \{{/each}}
                 </tbody>

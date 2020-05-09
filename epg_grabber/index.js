@@ -1,7 +1,9 @@
 'use strict'
 
 const fs = require('fs')
+const moment = require('moment')
 const path = require('path')
+const schedule = require('node-schedule')
 
 const basename = path.basename(__filename)
 const grabber = []
@@ -24,6 +26,26 @@ const init = function (db) {
       grabber.push(new ProviderParser(db, provider.id))
     })
   })
+  // Create update schedule (every minute)
+  schedule.scheduleJob('0 * * * * *', async function () {
+    // Get all EPG enabled
+    const epgs = await db.Epg.findAll({
+      where: {
+        status: true
+      }
+    })
+    for (const epgsIndex in epgs) {
+      // Get updateTime
+      if (moment().format('HH:mm') === epgs[epgsIndex].updateTime) {
+        for (const grabberIndex in grabber) {
+          if (grabber[grabberIndex].epgid === epgs[epgsIndex].id) {
+            grabber[grabberIndex].updateEpg()
+          }
+        }
+      }
+    }
+  })
+  console.log('[EPG] scheduler started')
 }
 
 const addProvider = function (provider) {

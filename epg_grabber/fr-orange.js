@@ -748,6 +748,7 @@ module.exports = class Grabber {
     this.epgid = null
     this.db = db
     const that = this
+    this.channels = channels
     // Add this grabber
     db.Epg.findOne({
       where: {
@@ -785,7 +786,7 @@ module.exports = class Grabber {
               maxArchiveDuration = 7
             }
             // Get number of channel
-            const channelsNumber = await that.getNumberOfChannel()
+            // const channelsNumber = await that.getNumberOfChannel()
             // if (moment(epgTag.start).startOf('day').diff(moment().add(maxArchiveDuration, 'days').startOf('day'), 'days') > 0 || channelsNumber !== Object.keys(channels).length) {
             if (moment(epgTag.start).startOf('day').diff(moment().add(maxArchiveDuration, 'days').startOf('day'), 'days') > 0) {
               that.updateEpg()
@@ -835,76 +836,76 @@ module.exports = class Grabber {
     // Get program
     let bulkCreate = []
     console.log('[EPG grabber Orange] update from ' + moment(startDate).format('YYYY-MM-DD') + ' to ' + moment(endDate).format('YYYY-MM-DD'))
-    fetch('https://rp-live-pc.woopic.com/live-webapp/v3/applications/STB4PC/programs?groupBy=channel&includeEmptyChannels=false&period=' + startDate + ',' + endDate).then(function (response) {
-      return response.json()
-    }).then(async function (json) {
-      for (const [channelId, programs] of Object.entries(json)) {
-        if (Object.prototype.hasOwnProperty.call(channels, parseInt(channelId))) {
-          for (const programIndex in programs) {
-            // Check if programId not exists
-            const epgTag = await that.db.sequelize.query('SELECT id FROM epgTag WHERE epgId = ' + that.epgid + ' AND programId = ' + programs[programIndex].id, {
-              type: that.db.sequelize.QueryTypes.SELECT
-            })
-            if (epgTag.length === 0) {
-              bulkCreate.push({
-                epgId: that.epgid,
-                programId: programs[programIndex].id,
-                channel: channels[channelId].id,
-                start: new Date(programs[programIndex].diffusionDate * 1000),
-                stop: moment(programs[programIndex].diffusionDate * 1000).add(programs[programIndex].duration, 'seconds').toDate(),
-                title: programs[programIndex].title,
-                description: programs[programIndex].synopsis
-              })
-            }
-          }
-          if (bulkCreate.length > 10000) {
-            await that.db.EpgTag.bulkCreate(bulkCreate)
-            bulkCreate = []
-          }
-        }
-      }
-      if (bulkCreate.length > 0) {
-        await that.db.EpgTag.bulkCreate(bulkCreate)
-        bulkCreate = []
-      }
-      // Clean EPG programmes
-      const stopDate = Math.round(new Date().getTime() / 1000) - (maxArchiveDuration * 86400)
-      // Delete old entries
-      await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId = :epgId AND stop < :stopDate', {
-        type: that.db.sequelize.QueryTypes.SELECT,
-        replacements: {
-          epgId: that.epgid,
-          stopDate: new Date(stopDate * 1000)
-        }
-      })
-      // Delete channel not in array
-      const channelId = []
-      for (const channelIndex in channels) {
-        channelId.push(channels[channelIndex].id)
-      }
-      await that.db.EpgTag.destroy({
-        where: {
-          channel: {
-            [that.db.Sequelize.Op.notIn]: channelId
-          },
-          epgId: that.epgid
-        }
-      })
-      console.log('[EPG grabber Orange] cleaned')
-      // Update last update
-      await that.db.Epg.update({
-        lastScan: new Date()
-      }, {
-        where: {
-          id: that.epgid
-        }
-      })
-      // Optimize database size
-      that.db.sequelize.query('VACUUM')
-    }).catch(function (error) {
+    let response = {}
+    try {
+      response = await fetch('https://rp-live-pc.woopic.com/live-webapp/v3/applications/STB4PC/programs?groupBy=channel&includeEmptyChannels=false&period=' + startDate + ',' + endDate)
+    } catch (error) {
       console.log('[EPG grabber Orange] cant get program list')
-      console.log(error)
+      return error
+    }
+    for (const [channelId, programs] of Object.entries(await response.json())) {
+      if (Object.prototype.hasOwnProperty.call(channels, parseInt(channelId))) {
+        for (const programIndex in programs) {
+          // Check if programId not exists
+          const epgTag = await that.db.sequelize.query('SELECT id FROM epgTag WHERE epgId = ' + that.epgid + ' AND programId = ' + programs[programIndex].id, {
+            type: that.db.sequelize.QueryTypes.SELECT
+          })
+          if (epgTag.length === 0) {
+            bulkCreate.push({
+              epgId: that.epgid,
+              programId: programs[programIndex].id,
+              channel: channels[channelId].id,
+              start: new Date(programs[programIndex].diffusionDate * 1000),
+              stop: moment(programs[programIndex].diffusionDate * 1000).add(programs[programIndex].duration, 'seconds').toDate(),
+              title: programs[programIndex].title,
+              description: programs[programIndex].synopsis
+            })
+          }
+        }
+        if (bulkCreate.length > 10000) {
+          await that.db.EpgTag.bulkCreate(bulkCreate)
+          bulkCreate = []
+        }
+      }
+    }
+    if (bulkCreate.length > 0) {
+      await that.db.EpgTag.bulkCreate(bulkCreate)
+      bulkCreate = []
+    }
+    // Clean EPG programmes
+    const stopDate = Math.round(new Date().getTime() / 1000) - (maxArchiveDuration * 86400)
+    // Delete old entries
+    await that.db.sequelize.query('DELETE FROM EpgTag WHERE epgId = :epgId AND stop < :stopDate', {
+      type: that.db.sequelize.QueryTypes.SELECT,
+      replacements: {
+        epgId: that.epgid,
+        stopDate: new Date(stopDate * 1000)
+      }
     })
+    // Delete channel not in array
+    const channelId = []
+    for (const channelIndex in channels) {
+      channelId.push(channels[channelIndex].id)
+    }
+    await that.db.EpgTag.destroy({
+      where: {
+        channel: {
+          [that.db.Sequelize.Op.notIn]: channelId
+        },
+        epgId: that.epgid
+      }
+    })
+    console.log('[EPG grabber Orange] cleaned')
+    // Update last update
+    await that.db.Epg.update({
+      lastScan: new Date()
+    }, {
+      where: {
+        id: that.epgid
+      }
+    })
+    // Optimize database size
+    that.db.sequelize.query('VACUUM')
   }
 
   async getMaxArchive () {
