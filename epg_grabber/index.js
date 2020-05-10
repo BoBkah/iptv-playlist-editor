@@ -36,7 +36,7 @@ const init = function (db) {
     })
     for (const epgsIndex in epgs) {
       // Get updateTime
-      if (moment().format('HH:mm') === epgs[epgsIndex].updateTime) {
+      if (moment().format('HH:mm') === epgs[epgsIndex].updateTime && epgs[epgsIndex].status === true) {
         for (const grabberIndex in grabber) {
           if (grabber[grabberIndex].epgid === epgs[epgsIndex].id) {
             grabber[grabberIndex].updateEpg()
