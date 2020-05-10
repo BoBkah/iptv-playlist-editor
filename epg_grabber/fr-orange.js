@@ -730,7 +730,7 @@ const channels = {
   },
   648: {
     name: 'FRANCE 3 RHONE ALPES',
-    id: 'france3rhoneaples.fr'
+    id: 'france3rhonealpes.fr'
   },
   90348: {
     name: 'IDF1',
