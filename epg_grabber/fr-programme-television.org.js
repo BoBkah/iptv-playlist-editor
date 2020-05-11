@@ -980,70 +980,84 @@ module.exports = class Grabber {
     while (moment(epgDay).diff(endDate) < 0) {
       const decompressor = new lzma.createDecompressor()
       // Download database from CDN
-      if (!fs.existsSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))) {
-        console.log('[EPG grabber Programme-television.org] download ' + moment(epgDay).format('YYYY-MM-DD') + ' database')
-        const response = await fetch('https://cdn.programme-television.ladmedia.fr/shared/mobile/bdd/partial/newfull_' + moment(epgDay).format('YYYYMMDD') + '.sqlite.xz')
-        const fileStream = fs.createWriteStream(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+      if (fs.existsSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))) {
+        console.log('[EPG grabber Programme-television.org] delete previous database file ' + path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+        try {
+          fs.unlinkSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+        } catch (error) {
+          console.log(error)
+        }
+      }
+      console.log('[EPG grabber Programme-television.org] download ' + moment(epgDay).format('YYYY-MM-DD') + ' database')
+      const response = await fetch('https://cdn.programme-television.ladmedia.fr/shared/mobile/bdd/partial/newfull_' + moment(epgDay).format('YYYYMMDD') + '.sqlite.xz')
+      const fileStream = fs.createWriteStream(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+      await new Promise(function (resolve, reject) {
+        response.body.pipe(decompressor).pipe(fileStream)
+        response.body.on('error', function (error) {
+          console.error(error)
+          return reject(error)
+        })
+        fileStream.on('finish', function () {
+          console.log('[EPG grabber Programme-television.org] download complete ' + moment(epgDay).format('YYYY-MM-DD'))
+          return resolve()
+        })
+      })
+      // Load database
+      if (fs.existsSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))) {
+        const database = new sqlite3.Database(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
         await new Promise(function (resolve, reject) {
-          response.body.pipe(decompressor).pipe(fileStream)
-          response.body.on('error', function (error) {
-            return reject(error)
-          })
-          fileStream.on('finish', function () {
-            console.log('[EPG grabber Programme-television.org] download complete')
-            return resolve()
+          database.all('SELECT * FROM chaine', function (err, chaines) {
+            if (err) {
+              console.error('[EPG grabber Programme-television.org] ' + err)
+              return reject(err)
+            }
+            // Get all programs
+            database.each('SELECT id_diffusion, id_chaine, date_diffusion, duree_diffusion, titre_diffusion, sous_titre_diffusion, texte FROM speed_diffusion LEFT JOIN texte ON texte.id_texte = speed_diffusion.id_texte', function (err, program) {
+              if (err) {
+                return false
+              }
+              if (Object.prototype.hasOwnProperty.call(channels, program.id_chaine)) {
+                that.db.EpgTag.findOne({
+                  where: {
+                    epgId: that.epgid,
+                    channel: channels[program.id_chaine].id,
+                    programId: program.id_diffusion
+                  }
+                }).then(function (row) {
+                  if (row === null) {
+                    that.db.EpgTag.create({
+                      epgId: that.epgid,
+                      channel: channels[program.id_chaine].id,
+                      programId: program.id_diffusion,
+                      start: new Date(program.date_diffusion),
+                      stop: moment(program.date_diffusion).add(program.duree_diffusion, 'minute').toDate(),
+                      title: program.titre_diffusion + (program.sous_titre_diffusion !== '' ? ' | ' + program.sous_titre_diffusion : ''),
+                      description: program.texte
+                    })
+                  }
+                })
+              }
+            }, function () {
+              // Close database
+              database.close(function (err) {
+                if (err) {
+                  console.error('[EPG grabber Programme-television.org] cant close database ' + path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+                  return reject(err)
+                }
+                try {
+                  fs.unlinkSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+                } catch (err) {
+                  console.log('[EPG grabber Programme-television.org] cant delete file ' + path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+                  console.error(err)
+                }
+                // Next day
+                epgDay = moment(epgDay).add(1, 'day').toDate()
+                return resolve()
+              })
+            })
           })
         })
       }
-      // Load database
-      const database = new sqlite3.Database(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
-      await new Promise(function (resolve, reject) {
-        database.all('SELECT * FROM chaine', function (err, chaines) {
-          if (err) {
-            console.error('[EPG grabber Programme-television.org] ' + err)
-            return reject(err)
-          }
-          // Get all programs
-          database.each('SELECT id_diffusion, id_chaine, date_diffusion, duree_diffusion, titre_diffusion, sous_titre_diffusion, texte FROM speed_diffusion LEFT JOIN texte ON texte.id_texte = speed_diffusion.id_texte', function (err, program) {
-            if (err) {
-              return false
-            }
-            if (Object.prototype.hasOwnProperty.call(channels, program.id_chaine)) {
-              that.db.EpgTag.findOne({
-                where: {
-                  epgId: that.epgid,
-                  channel: channels[program.id_chaine].id,
-                  programId: program.id_diffusion
-                }
-              }).then(function (row) {
-                if (row === null) {
-                  that.db.EpgTag.create({
-                    epgId: that.epgid,
-                    channel: channels[program.id_chaine].id,
-                    programId: program.id_diffusion,
-                    start: new Date(program.date_diffusion),
-                    stop: moment(program.date_diffusion).add(program.duree_diffusion, 'minute').toDate(),
-                    title: program.titre_diffusion + (program.sous_titre_diffusion !== '' ? ' | ' + program.sous_titre_diffusion : ''),
-                    description: program.texte
-                  })
-                }
-              })
-            }
-          }, function () {
-            // Close database
-            database.close()
-            try {
-              fs.unlinkSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
-            } catch (err) {
-              console.log('[EPG grabber Programme-television.org] cant delete file ' + path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
-            }
-            return resolve()
-          })
-        })
-      })
-      // Copy programs
-      // Next day
-      epgDay = moment(epgDay).add(1, 'day').toDate()
     }
     // Clean EPG programmes
     const stopDate = Math.round(new Date().getTime() / 1000) - (maxArchiveDuration * 86400)
