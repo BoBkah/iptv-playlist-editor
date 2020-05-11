@@ -1006,54 +1006,56 @@ module.exports = class Grabber {
       if (fs.existsSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))) {
         const database = new sqlite3.Database(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
         await new Promise(function (resolve, reject) {
-          database.all('SELECT * FROM chaine', function (err, chaines) {
+          const bulkCreate = []
+          // Get all programs
+          database.all('SELECT id_diffusion, id_chaine, date_diffusion, duree_diffusion, titre_diffusion, sous_titre_diffusion, texte FROM speed_diffusion LEFT JOIN texte ON texte.id_texte = speed_diffusion.id_texte', async function (err, programs) {
             if (err) {
-              console.error('[EPG grabber Programme-television.org] ' + err)
+              console.error(err)
               return reject(err)
             }
-            // Get all programs
-            database.each('SELECT id_diffusion, id_chaine, date_diffusion, duree_diffusion, titre_diffusion, sous_titre_diffusion, texte FROM speed_diffusion LEFT JOIN texte ON texte.id_texte = speed_diffusion.id_texte', function (err, program) {
-              if (err) {
-                return false
-              }
-              if (Object.prototype.hasOwnProperty.call(channels, program.id_chaine)) {
-                that.db.EpgTag.findOne({
-                  where: {
-                    epgId: that.epgid,
-                    channel: channels[program.id_chaine].id,
-                    programId: program.id_diffusion
-                  }
-                }).then(function (row) {
-                  if (row === null) {
-                    that.db.EpgTag.create({
+            for (const programIndex in programs) {
+              if (Object.prototype.hasOwnProperty.call(channels, programs[programIndex].id_chaine)) {
+                await new Promise(function (resolve, reject) {
+                  that.db.EpgTag.findOne({
+                    where: {
                       epgId: that.epgid,
-                      channel: channels[program.id_chaine].id,
-                      programId: program.id_diffusion,
-                      start: new Date(program.date_diffusion),
-                      stop: moment(program.date_diffusion).add(program.duree_diffusion, 'minute').toDate(),
-                      title: program.titre_diffusion + (program.sous_titre_diffusion !== '' ? ' | ' + program.sous_titre_diffusion : ''),
-                      description: program.texte
-                    })
-                  }
+                      channel: channels[programs[programIndex].id_chaine].id,
+                      programId: programs[programIndex].id_diffusion
+                    }
+                  }).then(function (row) {
+                    if (row === null) {
+                      bulkCreate.push({
+                        epgId: that.epgid,
+                        channel: channels[programs[programIndex].id_chaine].id,
+                        programId: programs[programIndex].id_diffusion,
+                        start: new Date(programs[programIndex].date_diffusion),
+                        stop: moment(programs[programIndex].date_diffusion).add(programs[programIndex].duree_diffusion, 'minute').toDate(),
+                        title: programs[programIndex].titre_diffusion + (programs[programIndex].sous_titre_diffusion !== '' ? ' | ' + programs[programIndex].sous_titre_diffusion : ''),
+                        description: programs[programIndex].texte
+                      })
+                    }
+                    resolve()
+                  })
                 })
               }
-            }, function () {
-              // Close database
-              database.close(function (err) {
-                if (err) {
-                  console.error('[EPG grabber Programme-television.org] cant close database ' + path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
-                  return reject(err)
-                }
-                try {
-                  fs.unlinkSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
-                } catch (err) {
-                  console.log('[EPG grabber Programme-television.org] cant delete file ' + path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
-                  console.error(err)
-                }
-                // Next day
-                epgDay = moment(epgDay).add(1, 'day').toDate()
-                return resolve()
-              })
+            }
+            // Flush
+            that.db.EpgTag.bulkCreate(bulkCreate)
+            // Close database
+            database.close(function (err) {
+              if (err) {
+                console.error('[EPG grabber Programme-television.org] cant close database ' + path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+                return reject(err)
+              }
+              try {
+                fs.unlinkSync(path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+              } catch (err) {
+                console.log('[EPG grabber Programme-television.org] cant delete file ' + path.join(process.cwd(), 'temp/programme-television-org-' + moment(epgDay).format('YYYYMMDD') + '.sqlite'))
+                console.error(err)
+              }
+              // Next day
+              epgDay = moment(epgDay).add(1, 'day').toDate()
+              return resolve()
             })
           })
         })
