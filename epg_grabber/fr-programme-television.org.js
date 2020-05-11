@@ -604,6 +604,10 @@ const channels = {
     name: 'STINGRAY CLASSICA',
     id: 'stringrayclassica.fr'
   },
+  1382: {
+    name: 'RMC Sport 4',
+    id: 'rmcsport4.fr'
+  },
   1399: {
     name: 'CHERIE 25',
     id: 'cherie25.fr'
@@ -672,6 +676,10 @@ const channels = {
     name: 'MTV HITS',
     id: 'mtvhits.fr'
   },
+  2029: {
+    name: 'RMC Sport 1 UHD',
+    id: 'rmcsport1uhd.fr'
+  },
   2037: {
     name: 'CRIME DISTRICT',
     id: 'crimedistrict.fr'
@@ -688,6 +696,10 @@ const channels = {
     name: 'ULTRA NATURE',
     id: 'ultranature.fr'
   },
+  2096: {
+    name: 'RMC Sport News',
+    id: 'rmcsportnews.fr'
+  },
   2111: {
     name: 'FRANCEINFO:',
     id: 'franceinfo.fr'
@@ -699,6 +711,10 @@ const channels = {
   2171: {
     name: 'VICE TV',
     id: 'vicetv.fr'
+  },
+  2184: {
+    name: 'Discovery Investigation',
+    id: 'discoveryinvestigation.fr'
   },
   2326: {
     name: 'POLAR+',
@@ -719,6 +735,66 @@ const channels = {
   2442: {
     name: 'TMC +1',
     id: 'tmcplus1.fr'
+  },
+  2665: {
+    name: 'RMC Sport 1',
+    id: 'rmcsport1.fr'
+  },
+  2666: {
+    name: 'RMC Sport 2',
+    id: 'rmcsport2.fr'
+  },
+  2667: {
+    name: 'RMC Sport 3',
+    id: 'rmcsport3.fr'
+  },
+  2668: {
+    name: 'RMC Sport Live 5',
+    id: 'rmcsportlive5.fr'
+  },
+  2669: {
+    name: 'RMC Sport Live 6',
+    id: 'rmcsportlive6.fr'
+  },
+  2670: {
+    name: 'RMC Sport Live 7',
+    id: 'rmcsportlive7.fr'
+  },
+  2671: {
+    name: 'RMC Sport Live 8',
+    id: 'rmcsportlive8.fr'
+  },
+  2672: {
+    name: 'RMC Sport Live 9',
+    id: 'rmcsportlive9.fr'
+  },
+  2673: {
+    name: 'RMC Sport Live 10',
+    id: 'rmcsportlive10.fr'
+  },
+  2674: {
+    name: 'RMC Sport Live 11',
+    id: 'rmcsportlive11.fr'
+  },
+  2675: {
+    name: 'RMC Sport Live 12',
+    id: 'rmcsportlive12.fr'
+  },
+  2676: {
+    name: 'RMC Sport Live 13',
+    id: 'rmcsportlive13.fr'
+  },
+  2677: {
+    name: 'RMC Sport Live 14',
+    id: 'rmcsportlive14.fr'
+  },
+  2678: {
+    name: 'RMC Sport Live 15',
+    id: 'rmcsportlive15.fr'
+  },
+  2679: {
+    name: 'RMC Sport Live 16',
+    id: 'rmcsportlive16.fr'
   },
   2752: {
     name: 'COMEDY CENTRAL',
