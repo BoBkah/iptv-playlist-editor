@@ -4,6 +4,7 @@ console.log(IS_PACKAGED ? 'Packaged version' : 'Dev version')
 // Rename native modules (pkg)
 const fs = require('fs-extra')
 const path = require('path')
+const proxy = require('express-http-proxy')
 /*
 fs.ensureDirSync('ipe')
 process.chdir('ipe')
@@ -42,6 +43,7 @@ const epgGrabber = require('./epg_grabber')
 const env = process.env.NODE_ENV || 'development'
 const i18n = require('i18n')
 const hbs = require('hbs')
+const url = require('url')
 
 moment.suppressDeprecationWarnings = true
 
@@ -88,6 +90,10 @@ hbs.registerHelper('__', function () {
 hbs.registerHelper('__n', function () {
   return i18n.__n.apply(this, arguments)
 })
+hbs.registerHelper('stringLimit', function (string) {
+  const maxString = string.substring(0, 52)
+  return new hbs.SafeString(maxString)
+})
 // Logs
 expressApp.use(function (req, res, next) {
   console.log('[API] ' + req.connection.remoteAddress + ' "' + req.method + ' ' + req._parsedUrl.path + '"')
@@ -96,11 +102,6 @@ expressApp.use(function (req, res, next) {
 // Manager interface
 expressApp.get('/manager', function (req, res) {
   res.render('index')
-  /*
-  res.sendFile('./views/index.html', {
-    root: __dirname
-  })
-  */
 })
 /**
  * EPG
@@ -138,8 +139,8 @@ expressApp.get('/manager/api/epg', function (req, res) {
         name: epgs[epgIndex].name,
         channels: channels,
         min: dates.min !== null ? moment(dates.min).format('YYYY-MM-DD HH:mm:ss') : '-',
-        max: dates.max !== null ?moment(dates.max).format('YYYY-MM-DD HH:mm:ss') : '-',
-        lastScan: moment(epgs[epgIndex].lastScan).format('YYYY-MM-DD HH:mm:ss'),
+        max: dates.max !== null ? moment(dates.max).format('YYYY-MM-DD HH:mm:ss') : '-',
+        lastScan: epgs[epgIndex].lastScan !== null ? moment(epgs[epgIndex].lastScan).format('YYYY-MM-DD HH:mm:ss') : '-',
         updateTime: epgs[epgIndex].updateTime,
         provider: epgs[epgIndex].providerId,
         status: epgs[epgIndex].status
@@ -575,6 +576,35 @@ expressApp.get('/manager/api/provider/:providerId/live/category', function (req,
     res.json(categories)
   }).catch(function (error) {
     res.status(500).send(error.message)
+  })
+})
+// Get update stream date
+expressApp.get('/manager/api/provider/:providerId/live', function (req, res) {
+  db.LiveStream.findAll({
+    attributes: [
+      [db.Sequelize.fn('strftime', '%Y-%m-%d', db.Sequelize.col('createdAt')), 'createdDayDate'],
+      'name',
+      'createdAt'
+    ],
+    order: [
+      ['createdAt', 'DESC'],
+      ['name']
+    ]
+  }).then(function (streams) {
+    const result = []
+    for (const stream in streams) {
+      if (Object.prototype.hasOwnProperty.call(streams[stream].dataValues, 'createdDayDate')) {
+        if (!Object.prototype.hasOwnProperty.call(result, streams[stream].dataValues.createdDayDate)) {
+          result[streams[stream].dataValues.createdDayDate] = []
+        }
+        result[streams[stream].dataValues.createdDayDate].push({
+          name: streams[stream].name,
+          createdDate: streams[stream].createdAt
+        })
+      }
+    }
+    console.log(result)
+    res.json(result)
   })
 })
 // Get streams category
@@ -1569,6 +1599,343 @@ expressApp.get(['/streaming/client_live.php', '/live/:username/:password/:stream
 expressApp.get('/', function (req, res) {
   res.redirect('/manager')
 })
+// VOD/Serie HTTP
+expressApp.head('^/kodi/:providerName/movies/:id([0-9]*)-:filename.mkv', async function (req, res) {
+  return res.status(200).send('Head received')
+})
+/*
+expressApp.get('^/kodi/:providerName/movies/:id([0-9]*)-:filename.mkv', async function (req, res) {
+  // Verify if provider exists
+  const provider = await db.Provider.findOne({
+    where: {
+      name: req.params.providerName
+    }
+  })
+  if (provider === null) {
+    return res.status(404).send('Provider not exists')
+  }
+  // Redirect
+  return res.redirect('http://' + provider.host + ':' + provider.port + '/movie/' + provider.username + '/' + provider.password + '/' + req.params.id + '.mkv')
+})
+*/
+// Get the final movie URL on provider
+expressApp.use('^/kodi/:providerName/movies/:id([0-9]*)-:filename.mkv', function (req, res, next) {
+  // Verify if provider exists
+  db.Provider.findOne({
+    where: {
+      name: req.params.providerName
+    }
+  }).then(function (provider) {
+    // Get proxy redirect
+    fetch('http://' + provider.host + ':' + provider.port + '/movie/' + provider.username + '/' + provider.password + '/' + req.params.id + '.mkv', {
+      redirect: 'manual'
+    }).then(function (res) {
+      const parsedUrl = new url.URL(res.headers.get('location'))
+      req.proxyHost = parsedUrl.origin
+      req.proxyPath = parsedUrl.pathname + parsedUrl.search
+      next()
+    }).catch(function (error) {
+      res.status(403).send(error)
+      next()
+    })
+  }).catch(function () {
+    return res.status(404).send('Provider not exists')
+  })
+})
+expressApp.get('^/kodi/:providerName/movies/:id([0-9]*)-:filename.mkv', proxy(function (req) {
+  return req.proxyHost
+}, {
+  proxyReqPathResolver: function (req) {
+    // return '/movie/' + req.provider.username + '/' + req.provider.password + '/' + req.params.id + '.mkv'
+    console.log('Proxyfying ' + req.proxyHost + req.proxyPath)
+    return req.proxyPath
+  },
+}))
+expressApp.head('^/kodi/:providerName/movies/:id([0-9]*)-:filename.nfo', async function (req, res) {
+  return res.status(200).send('Head received')
+})
+expressApp.get('^/kodi/:providerName/movies/:id([0-9]*)-:filename.nfo', async function (req, res) {
+  // Verify if provider exists
+  const provider = await db.Provider.findOne({
+    where: {
+      name: req.params.providerName
+    }
+  })
+  if (provider === null) {
+    return res.status(404).send('Provider not exists')
+  }
+  // Get movie info
+  let vodInfos = {}
+  try {
+    vodInfos = await requestProvider(provider, {
+      action: 'get_vod_info',
+      vod_id: req.params.id
+    })
+  } catch (error) {
+    return res.status(500).send('Cant get VOD stream info from provider API')
+  }
+  // Remove date in filename
+  const regexRemoveDate = / \([0-9]{4}\)/gi
+  vodInfos.movie_data.name = vodInfos.movie_data.name.replace(regexRemoveDate, '')
+  let sourceType = ''
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8')
+  res.write('<?xml version="1.0" encoding="UTF-8" standalone="yes" ?><movie>')
+  res.write('<title>' + vodInfos.movie_data.name + '</title>')
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'o_name')) {
+    vodInfos.info.o_name = vodInfos.info.o_name.replace(regexRemoveDate, '')
+    res.write('<originaltitle>' + vodInfos.info.o_name + '</originaltitle>')
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'rating')) {
+    res.write('<userrating>' + vodInfos.info.rating + '</userrating>')
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'plot')) {
+    res.write('<plot>' + vodInfos.info.plot + '</plot>')
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'duration_secs')) {
+    res.write('<runtime>' + Math.round(parseInt(vodInfos.info.duration_secs) / 60) + '</runtime>')
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'tmdb_id') && vodInfos.info.tmdb_id !== '') {
+    res.write('<uniqueid type="tmdb">' + vodInfos.info.tmdb_id + '</uniqueid>')
+    sourceType = 'tmdb'
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'imdb_id') && vodInfos.info.imdb_id !== '') {
+    res.write('<uniqueid type="imdb">' + vodInfos.info.imdb_id + '</uniqueid>')
+    sourceType = 'imdb'
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'genre')) {
+    let genres = []
+    try {
+      genres = JSON.parse(vodInfos.info.genre)
+    } catch (error) {}
+    if (genres.length === 0) {
+      genres = vodInfos.info.genre.split(',')
+    }
+    if (genres.length === 1) {
+      genres = vodInfos.info.genre.split('/')
+    }
+    for (const genresIndex in genres) {
+      res.write('<genre>' + genres[genresIndex].trim() + '</genre>')
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'country')) {
+    res.write('<country>' + vodInfos.info.country + '</country>')
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'director')) {
+    let directors = vodInfos.info.director
+    if (!Array.isArray(vodInfos.info.director)) {
+      directors = vodInfos.info.director.split(',')
+    }
+    for (const directorsIndex in directors) {
+      res.write('<director>' + directors[directorsIndex].trim() + '</director>')
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'movie_image')) {
+    res.write('<thumb aspect="poster">' + vodInfos.info.movie_image + '</thumb>')
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'cover_big')) {
+    res.write('<thumb aspect="poster">' + vodInfos.info.cover_big + '</thumb>')
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'releasedate')) {
+    let regex = {}
+    switch (sourceType) {
+      case 'imdb':
+      case 'tmdb':
+      default:
+        regex = /[0-9]{1,2} [A-z]* [0-9]{4} \(.*/gm
+        if (regex.exec(vodInfos.info.releasedate)) {
+          res.write('<premiered>' + moment(vodInfos.info.releasedate, 'D MMM YYYY').format('YYYY-MM-DD') + '</premiered>')
+        } else {
+          res.write('<premiered>' + vodInfos.info.releasedate + '</premiered>')
+        }
+        break
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'youtube_trailer') && vodInfos.info.youtube_trailer !== '') {
+    res.write('<trailer>plugin://plugin.video.youtube/?action=play_video&amp;videoid=' + vodInfos.info.youtube_trailer + '</trailer>')
+  }
+  let cast = []
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'actors')) {
+    if (vodInfos.info.actors.split(',').length > 1) {
+      cast = vodInfos.info.actors.split(',')
+    }
+    if (vodInfos.info.actors.split('/').length > 1) {
+      cast = uniqueArray(cast.concat(vodInfos.info.actors.split('/')))
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'cast')) {
+    if (vodInfos.info.cast.split('/').length > 1) {
+      cast = uniqueArray(cast.concat(vodInfos.info.cast.split('/')))
+    }
+    if (vodInfos.info.cast.split(',').length > 1) {
+      cast = uniqueArray(cast.concat(vodInfos.info.cast.split(',')))
+    }
+  }
+  for (const castIndex in cast) {
+    res.write('<actor><name>' + cast[castIndex].trim() + '</name></actor>')
+  }
+  // File info
+  if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'video') || Object.prototype.hasOwnProperty.call(vodInfos.info, 'audio')) {
+    res.write('<fileinfo><streamdetails>')
+    if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'video')) {
+      res.write('<video>')
+      if (Object.prototype.hasOwnProperty.call(vodInfos.info.video, 'codec_name')) {
+        res.write('<codec>' + vodInfos.info.video.codec_name + '</codec>')
+      }
+      if (Object.prototype.hasOwnProperty.call(vodInfos.info.video, 'display_aspect_ratio')) {
+        res.write('<aspect>' + vodInfos.info.video.display_aspect_ratio + '</aspect>')
+      }
+      if (Object.prototype.hasOwnProperty.call(vodInfos.info.video, 'height')) {
+        res.write('<height>' + vodInfos.info.video.height + '</height>')
+      }
+      if (Object.prototype.hasOwnProperty.call(vodInfos.info.video, 'width')) {
+        res.write('<width>' + vodInfos.info.video.width + '</width>')
+      }
+      res.write('</video>')
+    }
+    if (Object.prototype.hasOwnProperty.call(vodInfos.info, 'audio')) {
+      res.write('<audio>')
+      if (Object.prototype.hasOwnProperty.call(vodInfos.info.audio, 'codec_name')) {
+        res.write('<codec>' + vodInfos.info.audio.codec_name + '</codec>')
+      }
+      if (Object.prototype.hasOwnProperty.call(vodInfos.info.audio, 'tags') && Object.prototype.hasOwnProperty.call(vodInfos.info.audio.tags, 'language')) {
+        res.write('<language>' + vodInfos.info.audio.tags.language + '</language>')
+      }
+      res.write('</audio>')
+    }
+    res.write('</streamdetails></fileinfo>')
+  }
+  if (Object.prototype.hasOwnProperty.call(vodInfos.movie_data, 'category_id') && vodInfos.movie_data.category_id !== '') {
+    const vodCategoryInfos = await getVodCategory(provider, vodInfos.movie_data.category_id, 'movie')
+    if (vodCategoryInfos !== false) {
+      res.write('<tag>' + vodCategoryInfos.category_name + '</tag>')
+    }
+  }
+  res.write('</movie>')
+  res.end()
+})
+expressApp.get('^/kodi/:providerName/movies/:id([0-9]*)-:filename', async function (req, res) {
+  // Verify if provider exists
+  const provider = await db.Provider.findOne({
+    where: {
+      name: req.params.providerName
+    }
+  })
+  if (provider === null) {
+    return res.status(404).send('Provider not exists')
+  }
+  // Get movie info
+  let vodInfos = {}
+  try {
+    vodInfos = await requestProvider(provider, {
+      action: 'get_vod_info',
+      vod_id: req.params.id
+    })
+  } catch (error) {
+    return res.status(500).send('Cant get VOD stream info from provider API')
+  }
+  return res.render('kodi', {
+    items: [
+      {
+        link: encodeURI(vodInfos.movie_data.name + '.mkv'),
+        name: vodInfos.movie_data.name + '.mkv',
+        date: moment.unix(vodInfos.movie_data.added).format('DD-MMM-YYYY HH:mm'),
+        size: 0
+      },
+      {
+        link: encodeURI(vodInfos.movie_data.name + '.nfo'),
+        name: vodInfos.movie_data.name + '.nfo',
+        date: moment.unix(vodInfos.movie_data.added).format('DD-MMM-YYYY HH:mm'),
+        size: 0
+      }
+    ]
+  })
+})
+expressApp.get('/kodi/:providerName/movies', async function (req, res) {
+  // Verify if provider exists
+  const provider = await db.Provider.findOne({
+    where: {
+      name: req.params.providerName
+    }
+  })
+  if (provider === null) {
+    return res.status(404).send('Provider not exists')
+  }
+  // Get all vod streams
+  let vodStreams = {}
+  try {
+    vodStreams = await requestProvider(provider, {
+      action: 'get_vod_streams'
+    })
+  } catch (error) {
+    return res.status(500).send('Cant get VOD streams from provider API')
+  }
+  const links = []
+  for (const vodStreamsIndex in vodStreams) {
+    // Remove date in filename
+    const regexRemoveDate = / \([0-9]{4}\)/gi
+    vodStreams[vodStreamsIndex].name = vodStreams[vodStreamsIndex].name.replace(regexRemoveDate, '')
+    links.push({
+      link: encodeURI(vodStreams[vodStreamsIndex].stream_id + '-' + vodStreams[vodStreamsIndex].name + '.mkv'),
+      name: vodStreams[vodStreamsIndex].stream_id + '-' + vodStreams[vodStreamsIndex].name + '.mkv',
+      date: moment.unix(vodStreams[vodStreamsIndex].added).format('YYYY-MM-DD HH:mm'),
+      size: 0
+    })
+    links.push({
+      link: encodeURI(vodStreams[vodStreamsIndex].stream_id + '-' + vodStreams[vodStreamsIndex].name + '.nfo'),
+      name: vodStreams[vodStreamsIndex].stream_id + '-' + vodStreams[vodStreamsIndex].name + '.nfo',
+      date: moment.unix(vodStreams[vodStreamsIndex].added).format('YYYY-MM-DD HH:mm'),
+      size: 0
+    })
+  }
+  return res.render('kodi', { items: links, path: 'kodi/' + req.params.providerName + '/movies/' })
+})
+expressApp.get('/kodi/:providerName', async function (req, res) {
+  // Verify if provider exists
+  const provider = await db.Provider.findOne({
+    where: {
+      name: req.params.providerName
+    }
+  })
+  if (provider === null) {
+    return res.status(404).send('Provider not exists')
+  }
+  // Return folders
+  return res.render('kodi', {
+    path: 'kodi/' + req.params.providerName + '/',
+    items: [
+      {
+        link: 'movies/',
+        name: 'movies/',
+        date: moment(provider.createdAt).format('YYYY-MM-DD HH:mm'),
+        size: '-'
+      },
+      {
+        link: 'series/',
+        name: 'series/',
+        date: moment(provider.createdAt).format('YYYY-MM-DD HH:mm'),
+        size: '-'
+      }
+    ]
+  })
+})
+expressApp.get('/kodi', async function (req, res) {
+  // Get all providers
+  const providers = await db.Provider.findAll()
+  const links = []
+  for (const providerIndex in providers) {
+    links.push({
+      link: providers[providerIndex].name + '/',
+      name: providers[providerIndex].name + '/',
+      date: moment(providers[providerIndex].createdAt).format('YYYY-MM-DD HH:mm'),
+      size: '  - '
+    })
+  }
+  return res.render('kodi', { items: links, path: 'kodi/' })
+})
+
+expressApp.get('*', function (req, res) {
+  return res.status(404).send('404 Not found')
+})
 
 // Start service
 expressApp.listen(process.env.LISTEN || 3000, async function () {
@@ -1608,7 +1975,7 @@ const epgAvailable = async function (epgId) {
     const result = await await db.sequelize.query('SELECT channel FROM EpgTag WHERE channel = :channel AND date(start) = :start LIMIT 0,1', {
       type: db.sequelize.QueryTypes.SELECT,
       replacements: {
-        channel: epgId,
+        channel: epgId.toLowerCase(),
         start: moment().format('YYYY-MM-DD')
       }
     })

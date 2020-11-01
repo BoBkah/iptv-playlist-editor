@@ -8,7 +8,8 @@ module.exports = (sequelize, DataTypes) => {
     epgChannelId: DataTypes.STRING,
     icon: DataTypes.STRING,
     serviceId: DataTypes.STRING,
-    position: DataTypes.INTEGER
+    position: DataTypes.INTEGER,
+    status: DataTypes.BOOLEAN
   }, {
     freezeTableName: true
   })
